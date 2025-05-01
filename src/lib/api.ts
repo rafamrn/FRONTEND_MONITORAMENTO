@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "backendmonitoramento-production.up.railway.app", // Altere para a URL do backend em produção
+  baseURL: "https://backendmonitoramento-production.up.railway.app", // Altere para a URL do backend em produção
   headers: {
     "Content-Type": "application/json",
   },
