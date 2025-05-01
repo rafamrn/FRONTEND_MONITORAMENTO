@@ -40,10 +40,72 @@ const Usinas = () => {
     }));
   };
 
-  const handleSaveGeneration = () => {
-    console.log(`Saved projected generation for plant ID ${selectedPlant}:`, monthlyGeneration);
-    setSelectedPlant(null);
+  const handleSaveGeneration = async () => {
+    if (!selectedPlant) return;
+  
+    // Converte os nomes dos meses para números (1 a 12)
+    const mesNumero: { [key: string]: number } = {
+      "Janeiro": 1, "Fevereiro": 2, "Março": 3, "Abril": 4,
+      "Maio": 5, "Junho": 6, "Julho": 7, "Agosto": 8,
+      "Setembro": 9, "Outubro": 10, "Novembro": 11, "Dezembro": 12
+    };
+  
+    // Monta o payload no formato esperado pela API
+    const projections = Object.entries(monthlyGeneration).map(([month, kwh]) => ({
+      month: mesNumero[month],
+      kwh
+    }));
+  
+    const payload = {
+      plant_id: selectedPlant,
+      year: 2025, // você pode substituir isso por um estado/ano dinâmico se quiser
+      projections
+    };
+  
+    try {
+      const res = await fetch("https://backendmonitoramento-production.up.railway.app/projecoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+  
+      const data = await res.json();
+      console.log(data.message);
+      alert("Projeções salvas com sucesso!");
+  
+      setSelectedPlant(null);
+      setMonthlyGeneration({}); // limpa os campos
+    } catch (error) {
+      console.error("Erro ao salvar projeções:", error);
+      alert("Erro ao salvar projeções.");
+    }
   };
+  
+  const carregarProjecoesSalvas = async (plantId: number) => {
+    try {
+      const res = await fetch(`https://SEU-BACKEND.onrailway.app/projecoes/${plantId}?year=2025`);
+      const data = await res.json();
+  
+      const numeroParaMes: { [key: number]: string } = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+      };
+  
+      const dados: { [key: string]: number } = {};
+      data.forEach((item: { month: number; projection_kwh: number }) => {
+        const nomeMes = numeroParaMes[item.month];
+        if (nomeMes) {
+          dados[nomeMes] = item.projection_kwh;
+        }
+      });
+  
+      setMonthlyGeneration(dados);
+    } catch (error) {
+      console.error("Erro ao carregar projeções salvas:", error);
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -81,7 +143,10 @@ const Usinas = () => {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => setSelectedPlant(plant.ps_id)}
+                    onClick={() => {
+                      setSelectedPlant(plant.ps_id);
+                      carregarProjecoesSalvas(plant.ps_id);
+                    }}
                   >
                     <Plus size={16} className="mr-2" />
                     Projeção Mensal
@@ -100,11 +165,12 @@ const Usinas = () => {
                       <div key={month} className="flex flex-col space-y-1">
                         <Label htmlFor={`${month}-input`}>{month}</Label>
                         <Input
-                          id={`${month}-input`}
-                          type="number"
-                          placeholder="kWh"
-                          onChange={(e) => handleGenerationChange(month, e.target.value)}
-                        />
+                      id={`${month}-input`}
+                      type="number"
+                      placeholder="kWh"
+                      value={monthlyGeneration[month] || ""}
+                      onChange={(e) => handleGenerationChange(month, e.target.value)}
+                    />
                       </div>
                     ))}
                   </div>
