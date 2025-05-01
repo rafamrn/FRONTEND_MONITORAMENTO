@@ -1,0 +1,12 @@
+:root {
+    --font-size: 16px;
+  }
+  
+  html {
+    font-size: var(--font-size);
+  }
+  
+  body {
+    @apply text-base text-foreground bg-background font-sans;
+  }
+  
