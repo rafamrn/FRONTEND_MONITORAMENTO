@@ -44,15 +44,14 @@ import { getUsinas } from "@/services/usinaService";
 const EfficiencyBar = ({ value }: { value: number }) => {
   let color = "#ef4444"; // vermelho (red-500)
 
-  if (value >= 85) {
-    color = "bg-solar-blue"; // solar-blue (azul Tailwind)
+  if (value >= 90) {
+    color = "#3b82f6"; // solar-blue (azul Tailwind)
   } else if (value > 0) {
     color = "#facc15"; // amarelo (yellow-400)
   }
-
   return (
     <div className="flex items-center gap-2 w-full">
-      <Progress value={value} color={color} className="h-2" />
+      <Progress value={value} className={`h-2 ${color}`} />
       <span className="text-sm whitespace-nowrap">{value}%</span>
     </div>
   );
