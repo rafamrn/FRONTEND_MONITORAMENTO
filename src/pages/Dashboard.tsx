@@ -43,9 +43,11 @@ import { getUsinas } from "@/services/usinaService";
 // Efficiency progress bar component
 const EfficiencyBar = ({ value }: { value: number }) => {
   let color = "bg-red-500";
-  if (value > 0) {
-    color = "bg-solar-blue";
-  }
+if (value >= 80) {
+  color = "bg-green-500";
+} else if (value >= 50) {
+  color = "bg-yellow-500";
+}
   return (
     <div className="flex items-center gap-2 w-full">
       <Progress value={value} className={`h-2 ${color}`} />
@@ -64,7 +66,7 @@ const mapFaultStatusToText = (status: number): string => {
 };
 
 // Plant Detail Link component
-const PlantDetailRow = ({ plant }: { plant: any }) => {
+const PlantDetailRow = ({ plant, performance }: { plant: any, performance: number }) => {
   const navigate = useNavigate();
   return (
     <TableRow 
@@ -82,7 +84,7 @@ const PlantDetailRow = ({ plant }: { plant: any }) => {
         {plant.today_energy.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
       </TableCell>
       <TableCell className="text-center">
-        <EfficiencyBar value={plant.efficiency || 0} />
+      <EfficiencyBar value={performance} />
       </TableCell>
     </TableRow>
   );
@@ -92,6 +94,25 @@ const Dashboard = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [plants, setPlants] = useState<any[]>([]);
+  const [performances, setPerformances] = useState<{ [plantId: number]: number }>({});
+
+  useEffect(() => {
+    async function carregarPerformance() {
+      try {
+        const res = await fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria");
+        const data = await res.json();
+        const perfMap: { [plantId: number]: number } = {};
+        data.forEach((item: any) => {
+          perfMap[item.plant_id] = item.performance_percentual;
+        });
+        setPerformances(perfMap);
+      } catch (error) {
+        console.error("Erro ao buscar performance diária:", error);
+      }
+    }
+  
+    carregarPerformance();
+  }, []);
 
   useEffect(() => {
     getUsinas()
@@ -163,8 +184,12 @@ const Dashboard = () => {
           </TableHeader>
           <TableBody>
             {plants.map((plant) => (
-              <PlantDetailRow key={plant.ps_id} plant={plant} />
-            ))}
+          <PlantDetailRow
+            key={plant.ps_id}
+            plant={plant}
+            performance={performances[plant.ps_id] || 0}
+          />
+        ))}
           </TableBody>
         </Table>
       </div>
