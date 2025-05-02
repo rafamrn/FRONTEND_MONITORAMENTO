@@ -26,45 +26,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUser(null);
+    } else {
+      setUser({ name: "Autenticado", email: "", avatar: "" }); // opcional até criar rota /me
     }
     setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    
     try {
-      // In a real app, you'd call an API here
-      // For demo purposes, we'll just simulate a login
-      const userData = {
-        name: "Usuário Demo",
-        email,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
-      };
-      
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      
+      const response = await fetch("https://backendmonitoramento-production.up.railway.app/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          username: email,
+          password,
+        }),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.detail || "Erro ao fazer login");
+      }
+  
+      // Salva token JWT
+      localStorage.setItem("token", result.access_token);
+  
       toast({
         title: "Login bem-sucedido",
         description: "Bem-vindo ao sistema de monitoramento solar",
       });
-      
-      navigate('/');
-    } catch (error) {
+  
+      navigate("/usinas");
+    } catch (error: any) {
       toast({
         title: "Erro no login",
-        description: "Credenciais inválidas",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
@@ -89,10 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
     setUser(null);
     navigate('/login');
-    
     toast({
       title: "Logout realizado",
       description: "Você saiu do sistema com sucesso",
