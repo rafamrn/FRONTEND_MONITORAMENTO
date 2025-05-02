@@ -18,6 +18,7 @@ import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import { useEffect, useState } from "react";
+import RequireAuth from "./components/RequireAuth"; // 🔄 importa o novo componente
 
 const queryClient = new QueryClient();
 
@@ -49,7 +50,7 @@ const App = () => {
               <Route path="/esqueci-senha" element={<ForgotPassword />} />
               
               {/* Protected Routes */}
-              <Route path="/" element={<AppLayout />}>
+              <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
                 <Route index element={<Dashboard />} />
                 <Route path="usinas" element={<Usinas />} />
                 <Route path="usina/:id" element={<UsinaDetalhe />} />

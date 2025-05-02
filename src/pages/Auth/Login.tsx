@@ -40,24 +40,42 @@ const Login = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    
-    // Simulate login - replace with actual API call in production
-    setTimeout(() => {
-      // Simulating successful login
-      localStorage.setItem("user", JSON.stringify({ 
-        name: "Usuário Demo",
-        email: data.email,
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" 
-      }));
-      
+    try {
+      const response = await fetch("https://backendmonitoramento-production.up.railway.app/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          username: data.email,
+          password: data.password,
+        }),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.detail || "Erro ao fazer login");
+      }
+  
+      // Salva o token JWT
+      localStorage.setItem("token", result.access_token);
+  
       toast({
         title: "Login bem-sucedido",
         description: "Bem-vindo ao sistema de monitoramento solar",
       });
-      
-      navigate("/");
+  
+      navigate("/usinas");
+    } catch (error: any) {
+      toast({
+        title: "Erro no login",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (

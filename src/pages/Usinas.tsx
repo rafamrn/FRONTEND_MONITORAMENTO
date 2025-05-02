@@ -29,9 +29,28 @@ const Usinas = () => {
   const [dadosProjecao, setDadosProjecao] = useState<{ [plantId: number]: any[] }>({});
 
   useEffect(() => {
-    getUsinas()
+    const token = localStorage.getItem("token");
+  
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
+  
+    fetch("https://backendmonitoramento-production.up.railway.app/usina", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Token inválido ou expirado");
+        return res.json();
+      })
       .then(setPowerPlants)
-      .catch((err) => console.error("Erro ao carregar usinas:", err));
+      .catch((err) => {
+        console.error("Erro ao carregar usinas:", err);
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      });
   }, []);
 
   useEffect(() => {

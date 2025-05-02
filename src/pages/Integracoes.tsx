@@ -10,43 +10,39 @@ import { useToast } from "@/hooks/use-toast";
 
 // Mock data for manufacturers
 const manufacturers = [
+
   {
     id: 1,
-    name: "SolarEdge",
-    logo: "public/lovable-uploads/495a966f-2f87-4603-b2ea-6a11b4d4490a.png",
-    description: "Inversores e otimizadores de potência",
-  },
-  {
-    id: 2,
     name: "Huawei",
-    logo: "https://api.dicebear.com/7.x/shapes/svg?seed=Huawei",
+    logo: "/logos/huawei.png",
     description: "Inversores inteligentes e soluções de monitoramento",
   },
   {
-    id: 3,
-    name: "SMA Solar",
-    logo: "https://api.dicebear.com/7.x/shapes/svg?seed=SMA",
+    id: 2,
+    name: "Sungrow",
+    logo: "/logos/isolarcloud.png",
     description: "Inversores residenciais e comerciais",
   },
   {
-    id: 4,
+    id: 3,
     name: "Growatt",
-    logo: "https://api.dicebear.com/7.x/shapes/svg?seed=Growatt",
+    logo: "/logos/growatt.png",
     description: "Inversores e soluções de armazenamento de energia",
   },
   {
-    id: 5,
-    name: "Fronius",
-    logo: "https://api.dicebear.com/7.x/shapes/svg?seed=Fronius",
-    description: "Inversores e sistemas de monitoramento",
+    id: 6,
+    name: "Hypontech",
+    logo: "/logos/hyponcloud.png",
+    description: "Inversores string e centrais",
   },
   {
-    id: 6,
-    name: "ABB",
-    logo: "https://api.dicebear.com/7.x/shapes/svg?seed=ABB",
+    id: 7,
+    name: "Deye",
+    logo: "/logos/deye.png",
     description: "Inversores string e centrais",
   },
 ];
+
 
 // Login Dialog Component
 const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {

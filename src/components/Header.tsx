@@ -72,7 +72,8 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    localStorage.removeItem('token'); // remove o JWT
+    localStorage.removeItem('user');  // se ainda usar para o nome/avatar
     navigate('/login');
   };
 
