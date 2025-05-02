@@ -3,10 +3,11 @@ import * as ProgressPrimitive from "@radix-ui/react-progress"
 
 import { cn } from "@/lib/utils"
 
+// Agora aceita também a prop `color`
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
->(({ className, value, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & { color?: string }
+>(({ className, value, color = "#21c15d", ...props }, ref) => (
   <ProgressPrimitive.Root
     ref={ref}
     className={cn(
@@ -16,8 +17,12 @@ const Progress = React.forwardRef<
     {...props}
   >
     <ProgressPrimitive.Indicator
-      className="h-full w-full flex-1 bg-[#21c15d] transition-all"
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+      className="h-full flex-1 transition-all"
+      // Garante que a barra não passe de 100% visualmente
+      style={{
+        transform: `translateX(-${100 - Math.min(value || 0, 100)}%)`,
+        backgroundColor: color,
+      }}
     />
   </ProgressPrimitive.Root>
 ))

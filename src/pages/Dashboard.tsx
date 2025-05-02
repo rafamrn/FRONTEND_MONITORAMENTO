@@ -42,13 +42,17 @@ import { getUsinas } from "@/services/usinaService";
 
 // Efficiency progress bar component
 const EfficiencyBar = ({ value }: { value: number }) => {
-  let color = "bg-red-500";
-if (value > 0) {
-  color = "bg-solar-blue";
-}
+  let color = "#ef4444"; // vermelho (red-500)
+
+  if (value >= 85) {
+    color = "bg-solar-blue"; // solar-blue (azul Tailwind)
+  } else if (value > 0) {
+    color = "#facc15"; // amarelo (yellow-400)
+  }
+
   return (
     <div className="flex items-center gap-2 w-full">
-      <Progress value={value} className={`h-2 ${color}`} />
+      <Progress value={value} color={color} className="h-2" />
       <span className="text-sm whitespace-nowrap">{value}%</span>
     </div>
   );
