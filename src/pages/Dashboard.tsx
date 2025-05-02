@@ -11,47 +11,39 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Zap, Leaf, Bell, Factory } from 'lucide-react';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Zap, Leaf, Factory } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from 'react-router-dom';
 import { getUsinas } from "@/services/usinaService";
 
 // Status badge component
-
-  const StatusBadge = ({ status }: { status: string }) => {
-    switch (status) {
-      case 'online':
-        return <Badge className="bg-green-500 animate-pulse-slow">Online</Badge>;
-      case 'falha':
-        return <Badge variant="destructive">Falha</Badge>;
-      case 'alarme':
-        return <Badge className="bg-yellow-500">Alarme</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+const StatusBadge = ({ status }: { status: string }) => {
+  switch (status) {
+    case 'online':
+      return <Badge className="bg-green-500 animate-pulse-slow">Online</Badge>;
+    case 'falha':
+      return <Badge variant="destructive">Falha</Badge>;
+    case 'alarme':
+      return <Badge className="bg-yellow-500">Alarme</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+};
 
 // Efficiency progress bar component
 const EfficiencyBar = ({ value }: { value: number }) => {
-  let color = "#ef4444"; // vermelho (red-500)
+  let color = "#ef4444"; // vermelho
 
   if (value >= 90) {
-    color = "#3b82f6"; // solar-blue (azul Tailwind)
+    color = "#21c15d"; // verde
   } else if (value > 0) {
-    color = "#facc15"; // amarelo (yellow-400)
+    color = "#facc15"; // amarelo
   }
+
   return (
     <div className="flex items-center gap-2 w-full">
-      <Progress value={value} className={`h-2 ${color}`} />
+      <Progress value={value} color={color} className="h-2" />
       <span className="text-sm whitespace-nowrap">{value}%</span>
     </div>
   );
@@ -70,7 +62,7 @@ const mapFaultStatusToText = (status: number): string => {
 const PlantDetailRow = ({ plant, performance }: { plant: any, performance: number }) => {
   const navigate = useNavigate();
   return (
-    <TableRow 
+    <TableRow
       className="cursor-pointer hover:bg-muted/60 transition-colors duration-200 group"
       onClick={() => navigate(`/usina/${plant.ps_id}`)}
     >
@@ -79,13 +71,13 @@ const PlantDetailRow = ({ plant, performance }: { plant: any, performance: numbe
       </TableCell>
       <TableCell>{plant.location}</TableCell>
       <TableCell className="text-center">
-      <StatusBadge status={mapFaultStatusToText(plant.ps_fault_status)} />
+        <StatusBadge status={mapFaultStatusToText(plant.ps_fault_status)} />
       </TableCell>
       <TableCell className="text-center">
         {plant.today_energy.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
       </TableCell>
       <TableCell className="text-center">
-      <EfficiencyBar value={performance} />
+        <EfficiencyBar value={performance} />
       </TableCell>
     </TableRow>
   );
@@ -97,8 +89,9 @@ const Dashboard = () => {
   const [plants, setPlants] = useState<any[]>([]);
   const [performances, setPerformances] = useState<{ [plantId: number]: number }>({});
 
+  // Atualiza performance a cada 2 minutos
   useEffect(() => {
-    async function carregarPerformance() {
+    const carregarPerformance = async () => {
       try {
         const res = await fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria");
         const data = await res.json();
@@ -110,19 +103,30 @@ const Dashboard = () => {
       } catch (error) {
         console.error("Erro ao buscar performance diária:", error);
       }
-    }
-  
+    };
+
     carregarPerformance();
+    const interval = setInterval(() => carregarPerformance(), 120000); // 2 minutos
+
+    return () => clearInterval(interval);
   }, []);
 
+  // Atualiza usinas a cada 2 minutos
   useEffect(() => {
-    getUsinas()
-      .then(setPlants)
-      .catch(err => {
-        console.error("Erro ao carregar usinas", err);
-        toast({ title: "Erro", description: "Falha ao buscar dados das usinas." });
-      });
-  }, []);
+    const fetchUsinas = () => {
+      getUsinas()
+        .then(setPlants)
+        .catch(err => {
+          console.error("Erro ao carregar usinas", err);
+          toast({ title: "Erro", description: "Falha ao buscar dados das usinas." });
+        });
+    };
+
+    fetchUsinas();
+    const interval = setInterval(() => fetchUsinas(), 120000); // 2 minutos
+
+    return () => clearInterval(interval);
+  }, [toast]);
 
   const totalPlants = plants.length;
   const totalTodayEnergy = plants.reduce((sum, plant) => sum + (plant.today_energy || 0), 0);
@@ -185,12 +189,12 @@ const Dashboard = () => {
           </TableHeader>
           <TableBody>
             {plants.map((plant) => (
-          <PlantDetailRow
-            key={plant.ps_id}
-            plant={plant}
-            performance={performances[plant.ps_id] || 0}
-          />
-        ))}
+              <PlantDetailRow
+                key={plant.ps_id}
+                plant={plant}
+                performance={performances[plant.ps_id] || 0}
+              />
+            ))}
           </TableBody>
         </Table>
       </div>
