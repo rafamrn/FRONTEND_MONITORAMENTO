@@ -43,10 +43,8 @@ import { getUsinas } from "@/services/usinaService";
 // Efficiency progress bar component
 const EfficiencyBar = ({ value }: { value: number }) => {
   let color = "bg-red-500";
-if (value >= 80) {
-  color = "bg-green-500";
-} else if (value >= 50) {
-  color = "bg-yellow-500";
+if (value > 0) {
+  color = "bg-solar-blue";
 }
   return (
     <div className="flex items-center gap-2 w-full">
