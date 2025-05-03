@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -9,54 +8,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Download, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Mock data for demonstration
-const powerPlants = [
-  {
-    id: 1,
-    name: "Usina Solar Central",
-    location: "São Paulo, SP",
-    lastReportDate: "2025-03-28",
-    reportCount: 12,
-  },
-  {
-    id: 2,
-    name: "Parque Solar Norte",
-    location: "Fortaleza, CE",
-    lastReportDate: "2025-03-27",
-    reportCount: 10,
-  },
-  {
-    id: 3,
-    name: "Fazenda Solar Sul",
-    location: "Porto Alegre, RS",
-    lastReportDate: "2025-03-15",
-    reportCount: 8,
-  },
-  {
-    id: 4,
-    name: "Usina Solar Vale Verde",
-    location: "Belo Horizonte, MG",
-    lastReportDate: "2025-03-25",
-    reportCount: 11,
-  },
-  {
-    id: 5,
-    name: "Parque Solar Oeste",
-    location: "Cuiabá, MT",
-    lastReportDate: "2025-03-20",
-    reportCount: 9,
-  },
-];
-
 const Relatorios = () => {
   const { toast } = useToast();
+  const [usinas, setUsinas] = useState<any[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    fetch("https://backendmonitoramento-production.up.railway.app/usina", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => res.json())
+      .then(setUsinas)
+      .catch((err) => {
+        console.error("Erro ao carregar usinas", err);
+        toast({
+          title: "Erro ao buscar usinas",
+          description: "Falha ao acessar os dados da API.",
+          variant: "destructive",
+        });
+      });
+  }, [toast]);
 
   const handleExportReport = (plantId: number, plantName: string) => {
-    // In a real application, this would trigger a download
     toast({
       title: "Relatório em exportação",
       description: `O relatório da ${plantName} está sendo gerado.`,
@@ -64,7 +45,6 @@ const Relatorios = () => {
   };
 
   const handleExportAllReports = () => {
-    // In a real application, this would trigger multiple downloads or a zip file
     toast({
       title: "Exportando todos os relatórios",
       description: "Todos os relatórios estão sendo compilados para download.",
@@ -96,30 +76,28 @@ const Relatorios = () => {
               <TableRow>
                 <TableHead className="w-[250px]">Nome da Usina</TableHead>
                 <TableHead>Localização</TableHead>
-                <TableHead>Último Relatório</TableHead>
-                <TableHead>Qtd Relatórios</TableHead>
+                <TableHead>Última Atualização</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {powerPlants.map((plant) => (
-                <TableRow key={plant.id}>
+              {usinas.map((plant) => (
+                <TableRow key={plant.ps_id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-solar-blue" />
-                      {plant.name}
+                      {plant.ps_name}
                     </div>
                   </TableCell>
-                  <TableCell>{plant.location}</TableCell>
+                  <TableCell>{plant.location || "Não informado"}</TableCell>
                   <TableCell>
-                    {new Date(plant.lastReportDate).toLocaleDateString('pt-BR')}
+                    {new Date().toLocaleDateString("pt-BR")}
                   </TableCell>
-                  <TableCell>{plant.reportCount}</TableCell>
                   <TableCell className="text-right">
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => handleExportReport(plant.id, plant.name)}
+                      onClick={() => handleExportReport(plant.ps_id, plant.ps_name)}
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Exportar
