@@ -118,6 +118,12 @@ const Configuracoes = () => {
       title: "Configurações salvas",
       description: "Suas preferências foram atualizadas com sucesso."
     });
+    
+    // Recarrega a página após salvar as configurações
+    setTimeout(() => {
+      window.location.reload();
+    }, 500); // opcional: pequeno delay para o toast aparecer antes de recarregar
+    
   };
 
   // Load saved preferences on component mount
