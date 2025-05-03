@@ -17,6 +17,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from 'react-router-dom';
 import { getUsinas } from "@/services/usinaService";
 import PlantsStatusSummary from "@/components/PlantsStatusSummary";
+import { Loader2 } from "lucide-react"; // já deve estar no seu projeto
+
+
+
+
 
 const normalizarPotenciaKW = (valor: string | number): number => {
   if (typeof valor === 'string') {
@@ -164,8 +169,38 @@ const Dashboard = () => {
   const [performances, setPerformances] = useState<{ [plantId: number]: number }>({});
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [performances7d, setPerformances7d] = useState<{ [plantId: number]: number }>({});
+  const [loading, setLoading] = useState(true);
 
- 
+  useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        const [usinasRes, diariaRes, semanaRes] = await Promise.all([
+          getUsinas(),
+          fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria").then(res => res.json()),
+          fetch("https://backendmonitoramento-production.up.railway.app/performance_7dias").then(res => res.json())
+        ]);
+
+        setPlants(usinasRes);
+
+        const diariaMap: { [id: number]: number } = {};
+        diariaRes.forEach((p: any) => diariaMap[p.plant_id] = p.performance_percentual);
+        setPerformances(diariaMap);
+
+        const semanaMap: { [id: number]: number } = {};
+        semanaRes.forEach((p: any) => semanaMap[p.plant_id] = p.performance_percentual);
+        setPerformances7d(semanaMap);
+      } catch (error) {
+        toast({ title: "Erro", description: "Falha ao carregar dados." });
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarDados();
+  }, [toast]);
+
+
   // Atualiza performance semanal a cada 2 minutos
 
   useEffect(() => {
@@ -250,92 +285,99 @@ const Dashboard = () => {
   }));
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-solar-blue dark:text-white">Dashboard</h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          Visão geral de todas as usinas solares monitoradas pelo sistema.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total de Usinas</CardTitle>
-            <Factory className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPlants}</div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Energia Hoje</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {totalTodayEnergy.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kWh
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">CO₂ Evitado</CardTitle>
-            <Leaf className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {totalCO2Offset.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="mb-6">
-      <PlantsStatusSummary
-  plants={statusSummaryData}
-  onStatusClick={(status) =>
-    setSelectedStatus((prev) => (prev === status ? null : status))
-  }
-/>
-      </div>
-      
-
-      
-      
-      <div className="rounded-lg border bg-card overflow-x-auto animate-fade-in">
-        <Table>
-          <TableCaption>Lista de todas as usinas solares.</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[250px]">Nome</TableHead>
-              <TableHead>{!isMobile ? "Localização" : "Local"}</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-center">{!isMobile ? "Energia Hoje (kWh)" : "kWh"}</TableHead>
-              <TableHead className="text-center">Performance</TableHead>
+    <>
+      {loading ? (
+        <div className="flex justify-center items-center py-20 animate-fade-in">
+          <Loader2 className="h-6 w-6 animate-spin text-solar-orange mr-2" />
+          <span className="text-solar-orange font-medium">Carregando dados do dashboard...</span>
+        </div>
+      ) : (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-bold text-solar-blue dark:text-white">Dashboard</h1>
+            <p className="text-gray-500 dark:text-gray-400">
+              Visão geral de todas as usinas solares monitoradas pelo sistema.
+            </p>
+          </div>
+  
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <Card className="hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Total de Usinas</CardTitle>
+                <Factory className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalPlants}</div>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Energia Hoje</CardTitle>
+                <Zap className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {totalTodayEnergy.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kWh
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">CO₂ Evitado</CardTitle>
+                <Leaf className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {totalCO2Offset.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+  
+          <div className="mb-6">
+            <PlantsStatusSummary
+              plants={statusSummaryData}
+              onStatusClick={(status) =>
+                setSelectedStatus((prev) => (prev === status ? null : status))
+              }
+            />
+          </div>
+  
+          <div className="rounded-lg border bg-card overflow-x-auto">
+            <Table>
+              <TableCaption>Lista de todas as usinas solares.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[250px]">Nome</TableHead>
+                  <TableHead>{!isMobile ? "Localização" : "Local"}</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center">{!isMobile ? "Energia Hoje (kWh)" : "kWh"}</TableHead>
+                  <TableHead className="text-center">Performance</TableHead>
                   <TableHead className="text-center">Capacidade Atual</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-          {plants
-  .filter((plant) => {
-    if (!selectedStatus) return true;
-    const status = mapFaultStatusToStatus(plant.ps_fault_status);
-    return status === selectedStatus;
-  })
-  .map((plant) => (
-    <PlantDetailRow
-  key={plant.ps_id}
-  plant={plant}
-  performance1d={performances[plant.ps_id] || 0}
-  performance7d={performances7d[plant.ps_id] || 0}
-/>
-))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {plants
+                  .filter((plant) => {
+                    if (!selectedStatus) return true;
+                    const status = mapFaultStatusToStatus(plant.ps_fault_status);
+                    return status === selectedStatus;
+                  })
+                  .map((plant) => (
+                    <PlantDetailRow
+                      key={plant.ps_id}
+                      plant={plant}
+                      performance1d={performances[plant.ps_id] || 0}
+                      performance7d={performances7d[plant.ps_id] || 0}
+                    />
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+          </div>
+  )}
+</>
+);
 };
 
 export default Dashboard;

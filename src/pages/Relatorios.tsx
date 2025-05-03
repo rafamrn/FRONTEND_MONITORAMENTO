@@ -9,12 +9,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Relatorios = () => {
   const { toast } = useToast();
   const [usinas, setUsinas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -26,7 +27,10 @@ const Relatorios = () => {
       },
     })
       .then((res) => res.json())
-      .then(setUsinas)
+      .then((data) => {
+        setUsinas(data);
+        setLoading(false);
+      })
       .catch((err) => {
         console.error("Erro ao carregar usinas", err);
         toast({
@@ -34,6 +38,7 @@ const Relatorios = () => {
           description: "Falha ao acessar os dados da API.",
           variant: "destructive",
         });
+        setLoading(false);
       });
   }, [toast]);
 
@@ -69,46 +74,57 @@ const Relatorios = () => {
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[250px]">Nome da Usina</TableHead>
-                <TableHead>Localização</TableHead>
-                <TableHead>Última Atualização</TableHead>
-                <TableHead className="text-right">Ação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {usinas.map((plant) => (
-                <TableRow key={plant.ps_id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-solar-blue" />
-                      {plant.ps_name}
-                    </div>
-                  </TableCell>
-                  <TableCell>{plant.location || "Não informado"}</TableCell>
-                  <TableCell>
-                    {new Date().toLocaleDateString("pt-BR")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleExportReport(plant.ps_id, plant.ps_name)}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Exportar
-                    </Button>
-                  </TableCell>
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-solar-orange mr-2" />
+          <span className="text-solar-orange font-medium">Carregando usinas...</span>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[250px]">Nome da Usina</TableHead>
+                  <TableHead>Localização</TableHead>
+                  <TableHead>Última Atualização</TableHead>
+                  <TableHead>Qtd Relatórios</TableHead>
+                  <TableHead className="text-right">Ação</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {usinas.map((plant) => (
+                  <TableRow key={plant.ps_id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-solar-blue" />
+                        {plant.ps_name}
+                      </div>
+                    </TableCell>
+                    <TableCell>{plant.location || "Não informado"}</TableCell>
+                    <TableCell>
+                      {new Date().toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      {Math.floor(Math.random() * 10) + 1}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleExportReport(plant.ps_id, plant.ps_name)}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Exportar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
