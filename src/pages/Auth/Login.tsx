@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -14,9 +13,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Sun } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -43,30 +43,36 @@ const Login = () => {
     try {
       const response = await fetch("https://backendmonitoramento-production.up.railway.app/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           username: data.email,
           password: data.password,
         }),
       });
-  
+
       const result = await response.json();
-  
+
       if (!response.ok) {
         throw new Error(result.detail || "Erro ao fazer login");
       }
-  
-      // Salva o token JWT
+
+      // Armazenar token
       localStorage.setItem("token", result.access_token);
-  
+
+      // Opcional: simular dados do usuário com o e-mail
+      const mockUser = {
+        name: "Usuário",
+        email: data.email,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.email}`,
+      };
+      localStorage.setItem("user", JSON.stringify(mockUser));
+
       toast({
         title: "Login bem-sucedido",
-        description: "Bem-vindo ao sistema de monitoramento solar",
+        description: "Você foi autenticado com sucesso",
       });
-  
-      navigate("/usinas");
+
+      navigate("/"); // ou diretamente para /usinas se preferir
     } catch (error: any) {
       toast({
         title: "Erro no login",
@@ -82,9 +88,9 @@ const Login = () => {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 flex flex-col items-center">
-        <div className="flex items-center justify-center w-50 h-20 mb-4">
-          <img src="/logo3.png" alt="Logo" className="w-full h-full object-contain" />
-        </div>
+          <div className="flex items-center justify-center w-50 h-20 mb-4">
+            <img src="/logo3.png" alt="Logo" className="w-full h-full object-contain" />
+          </div>
           <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
           <CardDescription>
             Entre com suas credenciais para acessar o sistema
