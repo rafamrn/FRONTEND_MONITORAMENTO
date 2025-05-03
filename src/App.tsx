@@ -50,14 +50,16 @@ const App = () => {
               <Route path="/esqueci-senha" element={<ForgotPassword />} />
 
               {/* Rotas protegidas */}
-              <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
-                <Route index element={<Dashboard />} />
-                <Route path="usinas" element={<Usinas />} />
-                <Route path="usina/:id" element={<UsinaDetalhe />} />
-                <Route path="relatorios" element={<Relatorios />} />
-                <Route path="alertas" element={<Alertas />} />
-                <Route path="integracoes" element={<Integracoes />} />
-                <Route path="configuracoes" element={<Configuracoes />} />
+              <Route element={<RequireAuth />}>
+                <Route path="/" element={<AppLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="usinas" element={<Usinas />} />
+                  <Route path="usina/:id" element={<UsinaDetalhe />} />
+                  <Route path="relatorios" element={<Relatorios />} />
+                  <Route path="alertas" element={<Alertas />} />
+                  <Route path="integracoes" element={<Integracoes />} />
+                  <Route path="configuracoes" element={<Configuracoes />} />
+                </Route>
               </Route>
 
               {/* Rota 404 */}
