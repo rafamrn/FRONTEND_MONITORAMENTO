@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import AppearanceSettings from "../components/settings/AppearanceSettings";
+
 const Configuracoes = () => {
   const {
     theme,
@@ -30,11 +32,17 @@ const Configuracoes = () => {
 
   // Set font size for the entire application
   React.useEffect(() => {
+    // Aplica dinamicamente enquanto o usuário ajusta o slider
     document.documentElement.style.fontSize = `${fontSize}px`;
-    return () => {
-      document.documentElement.style.fontSize = '16px';
-    };
   }, [fontSize]);
+  
+  useEffect(() => {
+    // Aplica valor salvo no primeiro carregamento
+    const savedFontSize = localStorage.getItem('fontSize');
+    if (savedFontSize !== null) {
+      setFontSize(Number(savedFontSize)); // isso atualiza o estado e o efeito acima aplica
+    }
+  }, []);
 
   // Effect for applying animations
   useEffect(() => {

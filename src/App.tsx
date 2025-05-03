@@ -21,6 +21,12 @@ import NotFound from "./pages/NotFound";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useGlobalFontSize } from "@/hooks/useGlobalFontSize";
+
+const savedFontSize = localStorage.getItem('fontSize');
+if (savedFontSize) {
+  document.documentElement.style.fontSize = `${Number(savedFontSize)}px`;
+}
 
 const queryClient = new QueryClient();
 
