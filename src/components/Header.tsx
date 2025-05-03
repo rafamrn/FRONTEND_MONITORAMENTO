@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { 
@@ -72,8 +71,7 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // remove o JWT
-    localStorage.removeItem('user');  // se ainda usar para o nome/avatar
+    localStorage.removeItem('user');
     navigate('/login');
   };
 

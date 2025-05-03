@@ -16,6 +16,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from 'react-router-dom';
 import { getUsinas } from "@/services/usinaService";
+import PlantsStatusSummary from "@/components/PlantsStatusSummary";
+
+const normalizarPotenciaKW = (valor: string | number): number => {
+  if (typeof valor === 'string') {
+    const watts = parseFloat(valor.replace(/\./g, ''));
+    return watts / 1000;
+  }
+  return valor / 1000;
+};
 
 // Status badge component
 const StatusBadge = ({ status }: { status: string }) => {
@@ -49,6 +58,60 @@ const EfficiencyBar = ({ value }: { value: number }) => {
   );
 };
 
+interface EfficiencyCircleProps {
+  value: number;
+  label?: string;
+}
+
+const EfficiencyCircle = ({ value, label }: EfficiencyCircleProps) => {
+  const radius = 18;
+  const stroke = 4;
+  const normalizedRadius = radius - stroke * 0.5;
+  const circumference = 2 * Math.PI * normalizedRadius;
+  const strokeDashoffset =
+    circumference - (value / 100) * circumference;
+
+  let color = "#ef4444";
+  if (value >= 90) color = "#21c15d";
+  else if (value > 0) color = "#facc15";
+
+  return (
+    <div className="flex flex-col items-center space-y-1 w-12">
+      <div className="relative w-12 h-12">
+        <svg height="100%" width="100%" viewBox="0 0 40 40">
+          <circle
+            stroke="#e5e7eb"
+            fill="transparent"
+            strokeWidth={stroke}
+            r={normalizedRadius}
+            cx="20"
+            cy="20"
+          />
+          <circle
+            stroke={color}
+            fill="transparent"
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDashoffset={strokeDashoffset}
+            r={normalizedRadius}
+            cx="20"
+            cy="20"
+            style={{ transition: "stroke-dashoffset 0.35s" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold">
+          {Math.round(value)}%
+        </div>
+      </div>
+      {label && <span className="text-[10px] text-muted-foreground">{label}</span>}
+    </div>
+  );
+};
+
+
+
+
 const mapFaultStatusToText = (status: number): string => {
   switch (status) {
     case 1: return 'falha';
@@ -59,7 +122,7 @@ const mapFaultStatusToText = (status: number): string => {
 };
 
 // Plant Detail Link component
-const PlantDetailRow = ({ plant, performance }: { plant: any, performance: number }) => {
+const PlantDetailRow = ({ plant, performance1d, performance7d }: { plant: any, performance1d: number, performance7d: number }) => {
   const navigate = useNavigate();
   return (
     <TableRow
@@ -76,8 +139,14 @@ const PlantDetailRow = ({ plant, performance }: { plant: any, performance: numbe
       <TableCell className="text-center">
         {plant.today_energy.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
       </TableCell>
+      <TableCell className="flex items-center justify-center gap-3">
+  <EfficiencyCircle value={performance1d} label="1d." />
+  <EfficiencyCircle value={performance7d} label="7d." />
+  {/* <EfficiencyCircle value={0} label="1m." /> */}
+</TableCell>
+
       <TableCell className="text-center">
-        <EfficiencyBar value={performance} />
+        <EfficiencyBar value={parseFloat(((normalizarPotenciaKW(plant.curr_power) / plant.capacidade) * 100).toFixed(0))} />
       </TableCell>
     </TableRow>
   );
@@ -88,8 +157,36 @@ const Dashboard = () => {
   const isMobile = useIsMobile();
   const [plants, setPlants] = useState<any[]>([]);
   const [performances, setPerformances] = useState<{ [plantId: number]: number }>({});
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [performances7d, setPerformances7d] = useState<{ [plantId: number]: number }>({});
 
-  // Atualiza performance a cada 2 minutos
+ 
+  // Atualiza performance semanal a cada 2 minutos
+
+  useEffect(() => {
+    const carregarPerformance7d = async () => {
+      try {
+        const res = await fetch("https://backendmonitoramento-production.up.railway.app/performance_7dias");
+        const data = await res.json();
+        const perfMap: { [plantId: number]: number } = {};
+        data.forEach((item: any) => {
+          perfMap[item.plant_id] = item.performance_percentual;
+        });
+        setPerformances7d(perfMap);
+      } catch (error) {
+        console.error("Erro ao buscar performance de 7 dias:", error);
+      }
+    };
+  
+    carregarPerformance7d();
+    const interval = setInterval(() => carregarPerformance7d(), 120000); // 2 minutos
+  
+    return () => clearInterval(interval);
+  }, []);
+  
+
+
+  // Atualiza performance diário a cada 2 minutos
   useEffect(() => {
     const carregarPerformance = async () => {
       try {
@@ -131,6 +228,21 @@ const Dashboard = () => {
   const totalPlants = plants.length;
   const totalTodayEnergy = plants.reduce((sum, plant) => sum + (plant.today_energy || 0), 0);
   const totalCO2Offset = totalTodayEnergy * 0.5;
+
+  const mapFaultStatusToStatus = (status: number): string => {
+    switch (status) {
+      case 1: return 'falha';
+      case 2: return 'alarme';
+      case 3: return 'online';
+      default: return 'desconhecido';
+    }
+  };
+  
+  const statusSummaryData = plants.map((plant) => ({
+    id: plant.ps_id,
+    name: plant.ps_name,
+    status: mapFaultStatusToStatus(plant.ps_fault_status),
+  }));
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -174,7 +286,18 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+      <div className="mb-6">
+      <PlantsStatusSummary
+  plants={statusSummaryData}
+  onStatusClick={(status) =>
+    setSelectedStatus((prev) => (prev === status ? null : status))
+  }
+/>
+      </div>
+      
 
+      
+      
       <div className="rounded-lg border bg-card overflow-x-auto animate-fade-in">
         <Table>
           <TableCaption>Lista de todas as usinas solares.</TableCaption>
@@ -185,16 +308,24 @@ const Dashboard = () => {
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-center">{!isMobile ? "Energia Hoje (kWh)" : "kWh"}</TableHead>
               <TableHead className="text-center">Performance</TableHead>
+                  <TableHead className="text-center">Capacidade Atual</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {plants.map((plant) => (
-              <PlantDetailRow
-                key={plant.ps_id}
-                plant={plant}
-                performance={performances[plant.ps_id] || 0}
-              />
-            ))}
+          {plants
+  .filter((plant) => {
+    if (!selectedStatus) return true;
+    const status = mapFaultStatusToStatus(plant.ps_fault_status);
+    return status === selectedStatus;
+  })
+  .map((plant) => (
+    <PlantDetailRow
+  key={plant.ps_id}
+  plant={plant}
+  performance1d={performances[plant.ps_id] || 0}
+  performance7d={performances7d[plant.ps_id] || 0}
+/>
+))}
           </TableBody>
         </Table>
       </div>
