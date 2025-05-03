@@ -68,8 +68,11 @@ const EfficiencyCircle = ({ value, label }: EfficiencyCircleProps) => {
   const stroke = 4;
   const normalizedRadius = radius - stroke * 0.5;
   const circumference = 2 * Math.PI * normalizedRadius;
+
+  const clampedValue = Math.min(value, 100); // <- aqui limitamos o valor a no máximo 100
+
   const strokeDashoffset =
-    circumference - (value / 100) * circumference;
+    circumference - (clampedValue / 100) * circumference;
 
   let color = "#ef4444";
   if (value >= 90) color = "#21c15d";
@@ -112,6 +115,7 @@ const EfficiencyCircle = ({ value, label }: EfficiencyCircleProps) => {
 
 
 
+
 const mapFaultStatusToText = (status: number): string => {
   switch (status) {
     case 1: return 'falha';
@@ -140,8 +144,9 @@ const PlantDetailRow = ({ plant, performance1d, performance7d }: { plant: any, p
         {plant.today_energy.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
       </TableCell>
       <TableCell className="flex items-center justify-center gap-3">
-  <EfficiencyCircle value={performance1d} label="1d." />
-  <EfficiencyCircle value={performance7d} label="7d." />
+  <EfficiencyCircle value={performance1d} label="diária" />
+  <EfficiencyCircle value={performance7d} label="semanal" />
+  <EfficiencyCircle value={performance7d} label="mensal" />
   {/* <EfficiencyCircle value={0} label="1m." /> */}
 </TableCell>
 
