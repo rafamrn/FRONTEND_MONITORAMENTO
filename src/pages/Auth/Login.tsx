@@ -131,12 +131,12 @@ const Login = () => {
                 </Link>
               </div>
               <Button 
-                type="submit" 
-                className="w-full bg-solar-blue hover:bg-solar-blue/90"
-                disabled={isLoading}
-              >
-                {isLoading ? "Entrando..." : "Entrar"}
-              </Button>
+              type="submit" 
+              className="w-full bg-solar-blue hover:bg-solar-blue/90 hover:shadow-[0_0_12px_rgba(0,123,255,0.8)] transition-all duration-300"
+              disabled={isLoading}
+            >
+              {isLoading ? "Entrando..." : "Entrar"}
+            </Button>
             </form>
           </Form>
         </CardContent>
