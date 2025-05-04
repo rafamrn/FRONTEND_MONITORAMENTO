@@ -17,7 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from 'react-router-dom';
 import { getUsinas } from "@/services/usinaService";
 import PlantsStatusSummary from "@/components/PlantsStatusSummary";
-import { Loader2 } from "lucide-react"; // já deve estar no seu projeto
+import { Loader2 } from "lucide-react";
 
 
 
@@ -131,7 +131,7 @@ const mapFaultStatusToText = (status: number): string => {
 };
 
 // Plant Detail Link component
-const PlantDetailRow = ({ plant, performance1d, performance7d }: { plant: any, performance1d: number, performance7d: number }) => {
+const PlantDetailRow = ({ plant, performance1d, performance7d, performance30d }: { plant: any, performance1d: number, performance7d: number, performance30d: number }) => {
   const navigate = useNavigate();
   return (
     <TableRow
@@ -151,7 +151,7 @@ const PlantDetailRow = ({ plant, performance1d, performance7d }: { plant: any, p
       <TableCell className="flex items-center justify-center gap-3">
   <EfficiencyCircle value={performance1d} label="diária" />
   <EfficiencyCircle value={performance7d} label="semanal" />
-  <EfficiencyCircle value={performance7d} label="mensal" />
+  <EfficiencyCircle value={performance30d} label="mensal" />
   {/* <EfficiencyCircle value={0} label="1m." /> */}
 </TableCell>
 
@@ -169,6 +169,7 @@ const Dashboard = () => {
   const [performances, setPerformances] = useState<{ [plantId: number]: number }>({});
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [performances7d, setPerformances7d] = useState<{ [plantId: number]: number }>({});
+  const [performances30d, setPerformances30d] = useState<{ [plantId: number]: number }>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -177,7 +178,8 @@ const Dashboard = () => {
         const [usinasRes, diariaRes, semanaRes] = await Promise.all([
           getUsinas(),
           fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria").then(res => res.json()),
-          fetch("https://backendmonitoramento-production.up.railway.app/performance_7dias").then(res => res.json())
+          fetch("https://backendmonitoramento-production.up.railway.app/performance_7dias").then(res => res.json()),
+          fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias").then(res => res.json())
         ]);
 
         setPlants(usinasRes);
@@ -199,6 +201,29 @@ const Dashboard = () => {
 
     carregarDados();
   }, [toast]);
+
+  // Atualiza performance mensal a cada 2 minutos
+
+  useEffect(() => {
+    const carregarPerformance30d = async () => {
+      try {
+        const res = await fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias");
+        const data = await res.json();
+        const perfMap: { [plantId: number]: number } = {};
+        data.forEach((item: any) => {
+          perfMap[item.plant_id] = item.performance_percentual;
+        });
+        setPerformances30d(perfMap);
+      } catch (error) {
+        console.error("Erro ao buscar performance de 30 dias:", error);
+      }
+    };
+  
+    carregarPerformance30d();
+    const interval = setInterval(() => carregarPerformance30d(), 120000); // 2 minutos
+  
+    return () => clearInterval(interval);
+  }, []);
 
 
   // Atualiza performance semanal a cada 2 minutos
@@ -223,7 +248,6 @@ const Dashboard = () => {
   
     return () => clearInterval(interval);
   }, []);
-  
 
 
   // Atualiza performance diário a cada 2 minutos
@@ -369,6 +393,7 @@ const Dashboard = () => {
                       plant={plant}
                       performance1d={performances[plant.ps_id] || 0}
                       performance7d={performances7d[plant.ps_id] || 0}
+                      performance30d={performances30d[plant.ps_id] || 0}
                     />
                   ))}
               </TableBody>
