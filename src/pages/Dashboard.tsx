@@ -146,6 +146,9 @@ const PlantDetailRow = ({ plant, performance1d, performance7d, performance30d }:
         <StatusBadge status={mapFaultStatusToText(plant.ps_fault_status)} />
       </TableCell>
       <TableCell className="text-center">
+        {plant.capacidade.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
+      </TableCell>
+      <TableCell className="text-center">
         {plant.today_energy.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
       </TableCell>
       <TableCell className="flex items-center justify-center gap-3">
@@ -375,6 +378,7 @@ const Dashboard = () => {
                   <TableHead className="w-[250px]">Nome</TableHead>
                   <TableHead>{!isMobile ? "Localização" : "Local"}</TableHead>
                   <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center">Pot. Instalada (kW)</TableHead>
                   <TableHead className="text-center">{!isMobile ? "Energia Hoje (kWh)" : "kWh"}</TableHead>
                   <TableHead className="text-center">Performance</TableHead>
                   <TableHead className="text-center">Capacidade Atual</TableHead>

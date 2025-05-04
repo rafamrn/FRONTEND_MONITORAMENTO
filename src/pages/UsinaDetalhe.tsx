@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getUsinas } from '@/services/usinaService';
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Thermometer, Info, Gauge, Leaf, Zap, Factory } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Thermometer, Info, Gauge } from 'lucide-react';
 import { PowerGauge } from '@/components/PowerGauge';
 import EnergyProductionChart from '@/components/EnergyProductionChart';
 import { Button } from '@/components/ui/button';
@@ -19,13 +19,43 @@ const UsinaDetalhe = () => {
   const [plant, setPlant] = useState<any>(null);
   const [periodType, setPeriodType] = useState<'day' | 'month' | 'year'>('day');
   const [date, setDate] = useState<Date>(new Date());
+  const [totalGerado, setTotalGerado] = useState<number | null>(null);
 
+  // ✅ Busca e atualiza a planta + performance30d
   useEffect(() => {
-    getUsinas().then((usinas) => {
-      const found = usinas.find((u) => String(u.ps_id) === id);
-      if (found) setPlant(found);
-    });
+    const fetchUsinaEPerformance = async () => {
+      try {
+        const usinas = await getUsinas();
+        const found = usinas.find((u) => String(u.ps_id) === id);
+        if (found) {
+          let updatedPlant = { ...found };
+  
+          // Performance dos últimos 30 dias
+          const res30d = await fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias");
+          const data30d = await res30d.json();
+          const perf30d = data30d.find((item: any) => String(item.plant_id) === String(found.ps_id));
+          if (perf30d) {
+            updatedPlant.performance30d = perf30d.performance_percentual;
+          }
+  
+          // ✅ Performance diária (todas as usinas, filtra a correta)
+          const resDia = await fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria");
+          const dataDia = await resDia.json();
+          const perfDia = dataDia.find((item: any) => String(item.plant_id) === String(found.ps_id));
+          if (perfDia) {
+            updatedPlant.performance_diaria = perfDia.performance_percentual;
+          }
+  
+          setPlant(updatedPlant);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados da usina:", error);
+      }
+    };
+  
+    fetchUsinaEPerformance();
   }, [id]);
+
 
   const normalizarPotenciaKW = (valor: string | number): number => {
     if (typeof valor === 'string') {
@@ -90,7 +120,7 @@ const UsinaDetalhe = () => {
     }
   };
 
-  const economiaEstimada = plant.today_energy * 0.95;
+  const economiaEstimada = parseFloat((plant.today_energy * 0.95).toFixed(2));
 
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
@@ -133,11 +163,8 @@ const UsinaDetalhe = () => {
           </div>
         </div>
         <div className="flex gap-4 mt-4 sm:mt-0">
-          <Button className="bg-solar-blue hover:bg-solar-blue/80">
-            Ver Detalhes
-          </Button>
           <Button variant="outline">
-            Exportar Relatório
+            Exportar Relatório Mensal
           </Button>
         </div>
       </div>
@@ -152,7 +179,7 @@ const UsinaDetalhe = () => {
               <div className="text-3xl font-bold">{plant.today_energy.toLocaleString('pt-BR')} kWh </div>
               {plant.monthlyGrowth !== 0 && (
               <p className={`text-sm ${plant.monthlyGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {plant.monthlyGrowth > 0 ? '+' : ''}{plant.monthlyGrowth}% comparado ao mês anterior
+                {plant.monthlyGrowth > 0 ? '+' : ''}{plant.monthlyGrowth}% comparado ao dia anterior
               </p>
             )}
           </CardContent>
@@ -170,23 +197,23 @@ const UsinaDetalhe = () => {
   </CardContent>
 </Card>
 {/* Eficiência */}
-        <Card className="hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="pb-2">
-          <CardTitle className="text-solar-blue">Eficiência do Sistema</CardTitle>
-            </CardHeader>
-            <CardContent>
-            <div className="text-3xl font-bold">{plant.efficiency}%</div>
-            <div className="w-full h-2 bg-muted rounded-full mt-2">
-              <div 
-                className={`h-2 rounded-full ${
-                  plant.efficiency > 85 ? 'bg-green-500' : 
-                  plant.efficiency > 60 ? 'bg-yellow-500' : 'bg-red-500'
-                }`} 
-                style={{ width: `${plant.efficiency}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
+<Card className="hover:shadow-lg transition-shadow duration-300">
+  <CardHeader className="pb-2">
+    <CardTitle className="text-solar-blue">Performance do Sistema</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="text-3xl font-bold">{plant.performance30d}%</div>
+    <div className="w-full h-2 bg-muted rounded-full mt-2">
+      <div 
+        className={`h-2 rounded-full ${
+          plant.performance30d > 85 ? 'bg-green-500' : 
+          plant.performance30d > 60 ? 'bg-yellow-500' : 'bg-red-500'
+        }`} 
+        style={{ width: `${Math.min(plant.performance30d, 100)}%` }}
+      />
+    </div>
+  </CardContent>
+</Card>
       </div>
 
 
@@ -225,10 +252,24 @@ const UsinaDetalhe = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
-                <EnergyProductionChart periodType={periodType} />
-              </div>
-            </CardContent>
+  <div className="h-[300px]">
+    {plant?.ps_id && (
+      <EnergyProductionChart
+        periodType={periodType}
+        selectedDate={date}
+        plantId={plant.ps_id}
+        onTotalChange={(valor) => setTotalGerado(valor)}
+      />
+    )}
+  </div>
+  {totalGerado !== null && (
+    <div className="flex justify-center mt-6">
+      <p className="text-2xl font-bold text-white">
+        Total gerado: {totalGerado.toLocaleString('pt-BR')} kWh
+      </p>
+    </div>
+  )}
+</CardContent>
           </Card>
         </div>
 
@@ -285,21 +326,21 @@ const UsinaDetalhe = () => {
             <CardTitle>Estado Atual do Sistema</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Eficiência Atual</p>
-                <p className="font-medium">{plant.efficiency}%</p>
-              </div>
-              <div className="w-full h-2 bg-muted rounded-full mt-2">
-                <div 
-                  className={`h-2 rounded-full ${
-                    plant.efficiency > 85 ? 'bg-green-500' : 
-                    plant.efficiency > 60 ? 'bg-yellow-500' : 'bg-red-500'
-                  }`} 
-                  style={{ width: `${plant.efficiency}%` }}
-                />
-              </div>
+          <div>
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">Performance Diária</p>
+              <p className="font-medium">{plant.performance_diaria}%</p>
             </div>
+            <div className="w-full h-2 bg-muted rounded-full mt-2">
+              <div 
+                className={`h-2 rounded-full ${
+                  plant.performance_diaria > 85 ? 'bg-green-500' : 
+                  plant.performance_diaria > 60 ? 'bg-yellow-500' : 'bg-red-500'
+                }`} 
+                style={{ width: `${Math.min(plant.performance_diaria, 100)}%` }}
+              />
+            </div>
+          </div>
             
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

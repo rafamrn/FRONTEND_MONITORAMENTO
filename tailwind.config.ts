@@ -9,7 +9,8 @@ export default {
 		"./components/**/*.{ts,tsx}",
 		"./app/**/*.{ts,tsx}",
 		"./src/**/*.{ts,tsx}",
-		"./**/*.css", // adiciona todos os .css para o Tailwind analisar
+		"./src/**/*.css",
+		"./components/**/*.css", // adiciona todos os .css para o Tailwind analisar
 	  ],
 	prefix: "",
 	theme: {

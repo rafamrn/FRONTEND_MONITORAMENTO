@@ -94,7 +94,7 @@ export default function AppLayout() {
               <SidebarTrigger />
             </div>
             <div className="absolute left-1/2 transform -translate-x-1/2">
-    <img src="/RMS2.png" alt="Logo" className="h-14" /> {/* ajuste a altura conforme necessário */}
+    <img src="/logo3.png" alt="Logo" className="h-14" /> {/* ajuste a altura conforme necessário */}
   </div>
             <Header />
           </header>
