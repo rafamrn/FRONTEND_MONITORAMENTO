@@ -41,7 +41,11 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
   
         const token = localStorage.getItem("token");
   
-        const response = await axios.get('https://backendmonitoramento-production.up.railway.app/api/geracao', {
+        const endpoint = periodType === 'month'
+          ? 'https://backendmonitoramento-production.up.railway.app/api/geracao/mensal'
+          : 'https://backendmonitoramento-production.up.railway.app/api/geracao';
+  
+        const response = await axios.get(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`
           },
@@ -57,12 +61,20 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
         if (periodType === 'day' && Array.isArray(responseData.diario)) {
           setData(responseData.diario);
           if (responseData.p1) setTotalP1(responseData.p1);
+        } else if (periodType === 'month' && Array.isArray(responseData.mensal)) {
+          const mensalData = responseData.mensal.map((item: any) => ({
+            time: item.date,
+            production: item.production
+          }));
+          setData(mensalData);
+          setTotalP1(responseData.total);
         } else if (Array.isArray(responseData)) {
           setData(responseData);
         } else {
           console.warn("Formato de dados inesperado:", responseData);
           setData([]);
         }
+  
       } catch (error) {
         console.error('Erro ao carregar dados de geração:', error);
         setData([]);
