@@ -38,43 +38,57 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
           periodType === 'month' ? 'YYYY-MM' :
           'YYYY'
         );
-  
+
         const token = localStorage.getItem("token");
-  
-        const endpoint = periodType === 'month'
-          ? 'https://backendmonitoramento-production.up.railway.app/api/geracao/mensal'
-          : 'https://backendmonitoramento-production.up.railway.app/api/geracao';
-  
+
+        const endpoint =
+          periodType === 'month'
+            ? 'https://backendmonitoramento-production.up.railway.app/api/geracao/mensal'
+            : periodType === 'year'
+            ? 'https://backendmonitoramento-production.up.railway.app/api/geracao/anual'
+            : 'https://backendmonitoramento-production.up.railway.app/api/geracao';
+
+        const params =
+          periodType === 'year'
+            ? { year: dateParam, plant_id: plantId }
+            : { period: periodType, date: dateParam, plant_id: plantId };
+
         const response = await axios.get(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`
           },
-          params: {
-            period: periodType,
-            date: dateParam,
-            plant_id: plantId,
-          }
+          params
         });
-  
+
         const responseData = response.data;
-  
+
         if (periodType === 'day' && Array.isArray(responseData.diario)) {
-          setData(responseData.diario);
+          setData(responseData.diario.map((item: any) => ({
+            time: item.time,
+            production: item.production
+          })));
           if (responseData.p1) setTotalP1(responseData.p1);
+
         } else if (periodType === 'month' && Array.isArray(responseData.mensal)) {
-          const mensalData = responseData.mensal.map((item: any) => ({
+          setData(responseData.mensal.map((item: any) => ({
             time: item.date,
             production: item.production
-          }));
-          setData(mensalData);
+          })));
           setTotalP1(responseData.total);
-        } else if (Array.isArray(responseData)) {
-          setData(responseData);
+
+        } else if (periodType === 'year' && Array.isArray(responseData.anual)) {
+          console.log("Dados ano:", responseData.anual);
+          setData(responseData.anual.map((item: any) => ({
+            time: item.date,
+            production: item.production
+          })));
+          setTotalP1(responseData.total);
+
         } else {
           console.warn("Formato de dados inesperado:", responseData);
           setData([]);
         }
-  
+
       } catch (error) {
         console.error('Erro ao carregar dados de geração:', error);
         setData([]);
@@ -82,7 +96,7 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
         setLoading(false);
       }
     };
-  
+
     if (plantId) {
       fetchEnergyData();
     }
@@ -103,7 +117,7 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
           <YAxis tickLine={false} axisLine={false} unit={getUnit()} />
           <Tooltip
             formatter={(value) => [`${value} ${getUnit()}`, 'Produção']}
-            labelFormatter={(label) => `Horário: ${label}`}
+            labelFormatter={(label) => `${periodType === 'year' ? 'Mês' : periodType === 'month' ? 'Dia' : 'Hora'}: ${label}`}
             contentStyle={{
               borderRadius: '8px',
               border: 'none',
@@ -121,10 +135,10 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
         </LineChart>
       </ResponsiveContainer>
       {totalP1 !== null && (
-    <div className="text-center mt-6 text-lg font-semibold text-white">
-      Geração Total: {totalP1.toLocaleString('pt-BR')} kWh
-    </div>
-  )}
+        <div className="text-center mt-6 text-lg font-semibold text-white">
+          Geração Total: {totalP1.toLocaleString('pt-BR')} kWh
+        </div>
+      )}
     </div>
   );
 };

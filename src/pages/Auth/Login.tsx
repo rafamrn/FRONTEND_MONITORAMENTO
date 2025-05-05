@@ -89,7 +89,7 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 flex flex-col items-center">
           <div className="flex items-center justify-center w-50 h-20 mb-4">
-            <img src="/logo3.png" alt="Logo" className="w-full h-full object-contain" />
+            <img src="/RMS2.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
           <CardDescription>
@@ -140,14 +140,7 @@ const Login = () => {
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-500">
-            Não tem uma conta?{" "}
-            <Link to="/cadastro" className="text-solar-orange hover:underline">
-              Cadastre-se
-            </Link>
-          </p>
-        </CardFooter>
+
       </Card>
     </div>
   );

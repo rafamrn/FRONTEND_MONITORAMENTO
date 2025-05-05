@@ -351,6 +351,16 @@ const UsinaDetalhe = () => {
                 {plant.temperature > 0 ? `${plant.temperature}°C` : 'N/A'}
               </p>
             </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Thermometer className="h-5 w-5 text-solar-blue" />
+                <p className="text-sm text-muted-foreground">Temperatura</p>
+              </div>
+              <p className={`font-medium ${plant.temperature > 35 ? 'text-red-500' : plant.temperature > 30 ? 'text-yellow-500' : 'text-green-500'}`}>
+                {plant.temperature > 0 ? `${plant.temperature}°C` : 'N/A'}
+              </p>
+            </div>
           </CardContent>
         </Card>
         </div>
