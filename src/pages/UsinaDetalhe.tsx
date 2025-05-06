@@ -409,9 +409,13 @@ const UsinaDetalhe = () => {
           <CardTitle>Informações Técnicas do Sistema</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {dadosTecnicos.map((inversor, idx) => {
-            const tensoes = Object.entries(inversor).filter(([k]) => k.startsWith("tensao_string_"));
-            const correntes = Object.entries(inversor).filter(([k]) => k.startsWith("corrente_string_"));
+        {dadosTecnicos.map((inversor, idx) => {
+        const tensoes = Object.entries(inversor).filter(([k]) => k.startsWith("tensao_string_"));
+        const correntes = Object.entries(inversor).filter(([k]) => k.startsWith("corrente_string_"));
+        const tensoesMPPT = Object.entries(inversor).filter(([k]) => k.startsWith("tensao_mppt_"));
+        const correntesMPPT = Object.entries(inversor).filter(([k]) => k.startsWith("corrente_mppt_"));
+
+            
             return (
               <div key={idx} className="space-y-4 border-t pt-4 mt-4">
                 <div className="flex items-center gap-2">
@@ -426,11 +430,11 @@ const UsinaDetalhe = () => {
 
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <Thermometer className="h-5 w-5 white" />
+                      <Thermometer className="h-5 w-5 text-solar-orange" />
                       <p className="text-sm text-muted-foreground">Temperatura de Ar Interna</p>
                     </div>
                     <p className={`font-medium ${
-                      inversor.temperatura_interna > 35
+                      inversor.temperatura_interna > 65
                         ? 'text-red-500'
                         : inversor.temperatura_interna > 30
                         ? 'text-yellow-500'
@@ -445,10 +449,7 @@ const UsinaDetalhe = () => {
 
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Gauge className="h-4 w-4 white" />
-                    <p className="text-sm text-muted-foreground">Tensões</p>
-                  </div>
+
                   {tensoes.map(([nome, valor]) => (
                     <div key={nome} className="flex justify-between items-center">
                       <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, ' ')}</p>
@@ -459,10 +460,6 @@ const UsinaDetalhe = () => {
 
                 
                 <div className="space-y-1 mt-2">
-                  <div className="flex items-center gap-2">
-                    <Gauge className="h-4 w-4 white" />
-                    <p className="text-sm text-muted-foreground">Correntes</p>
-                  </div>
                   {correntes.map(([nome, valor]) => (
                     <div key={nome} className="flex justify-between items-center">
                       <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, ' ')}</p>
@@ -470,6 +467,36 @@ const UsinaDetalhe = () => {
                     </div>
                   ))}
                 </div>
+              {/* Tensões por MPPT */}
+              <div className="space-y-1 mt-4">
+                <div className="flex items-center gap-2">
+                  <Gauge className="h-5 w-5 text-solar-orange" />
+                  <p className="text-base font-semibold white">Tensões por MPPT</p>
+                </div>
+                {tensoesMPPT.map(([nome, valor]) => (
+                  <div key={nome} className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, " ")}</p>
+                    <p className="font-medium">{valor} V</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Correntes por MPPT */}
+              <div className="space-y-1 mt-2">
+                <div className="flex items-center gap-2">
+                  <Gauge className="h-5 w-5 text-solar-orange" />
+                  <p className="text-base font-semibold white">Correntes por MPPT</p>
+                </div>
+                {correntesMPPT.map(([nome, valor]) => (
+                  <div key={nome} className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, " ")}</p>
+                    <p className="font-medium">{valor} A</p>
+                  </div>
+                ))}
+              </div>
+
+
+
               </div>
             );
           })}

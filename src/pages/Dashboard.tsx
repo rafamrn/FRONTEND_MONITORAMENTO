@@ -142,7 +142,6 @@ const PlantDetailRow = ({ plant, performance1d, performance7d, performance30d }:
         {plant.ps_name}
       </TableCell>
       <TableCell>{plant.location}</TableCell>
-      <TableCell className="text-center">OK</TableCell>
       <TableCell className="text-center">
         <StatusBadge status={mapFaultStatusToText(plant.ps_fault_status)} />
       </TableCell>
@@ -378,7 +377,6 @@ const Dashboard = () => {
                 <TableRow>
                   <TableHead className="w-[250px]">Nome</TableHead>
                   <TableHead>{!isMobile ? "Localização" : "Local"}</TableHead>
-                  <TableHead className="text-center">Verificação de Performance</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-center">Pot. Instalada (kW)</TableHead>
                   <TableHead className="text-center">{!isMobile ? "Energia Hoje (kWh)" : "kWh"}</TableHead>
@@ -387,21 +385,26 @@ const Dashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {plants
-                  .filter((plant) => {
-                    if (!selectedStatus) return true;
-                    const status = mapFaultStatusToStatus(plant.ps_fault_status);
-                    return status === selectedStatus;
-                  })
-                  .map((plant) => (
-                    <PlantDetailRow
-                      key={plant.ps_id}
-                      plant={plant}
-                      performance1d={performances[plant.ps_id] || 0}
-                      performance7d={performances7d[plant.ps_id] || 0}
-                      performance30d={performances30d[plant.ps_id] || 0}
-                    />
-                  ))}
+              {plants
+              .filter((plant) => {
+                if (!selectedStatus) return true;
+                const status = mapFaultStatusToStatus(plant.ps_fault_status);
+                return status === selectedStatus;
+              })
+              .sort((a, b) => {
+                const perfA = performances30d[a.ps_id] ?? 0;
+                const perfB = performances30d[b.ps_id] ?? 0;
+                return perfA - perfB;
+              })
+              .map((plant) => (
+                <PlantDetailRow
+                  key={plant.ps_id}
+                  plant={plant}
+                  performance1d={performances[plant.ps_id] || 0}
+                  performance7d={performances7d[plant.ps_id] || 0}
+                  performance30d={performances30d[plant.ps_id] || 0}
+                />
+              ))}
               </TableBody>
             </Table>
           </div>
