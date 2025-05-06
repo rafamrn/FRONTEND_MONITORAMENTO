@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getUsinas } from '@/services/usinaService';
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Thermometer, Info, Gauge } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Thermometer, Info, Gauge, CircleAlert, CircuitBoard } from 'lucide-react';
 import { PowerGauge } from '@/components/PowerGauge';
 import EnergyProductionChart from '@/components/EnergyProductionChart';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
+
+
 const UsinaDetalhe = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,6 +22,8 @@ const UsinaDetalhe = () => {
   const [periodType, setPeriodType] = useState<'day' | 'month' | 'year'>('day');
   const [date, setDate] = useState<Date>(new Date());
   const [totalGerado, setTotalGerado] = useState<number | null>(null);
+  const [dadosTecnicos, setDadosTecnicos] = useState<any[]>([]);
+  const token = localStorage.getItem("token");
 
   // ✅ Busca e atualiza a planta + performance30d
   useEffect(() => {
@@ -55,6 +59,42 @@ const UsinaDetalhe = () => {
   
     fetchUsinaEPerformance();
   }, [id]);
+
+  useEffect(() => {
+    const getDadosTecnicos = async (plantId: number, token: string | null) => {
+      const res = await fetch(`https://backendmonitoramento-production.up.railway.app/dados_tecnicos?plant_id=${plantId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    
+      if (!res.ok) {
+        throw new Error("Erro ao buscar dados técnicos");
+      }
+    
+      return await res.json();
+    };
+    async function fetchDados() {
+      try {
+        const res = await getDadosTecnicos(Number(id), token);
+        setDadosTecnicos(res.dados);
+    
+        if (res.dados && res.dados.length > 0) {
+          const temperatura = res.dados[0].temperatura_interna;
+          setPlant((prevPlant: any) => ({
+            ...prevPlant,
+            temperatura_interna: temperatura
+          }));
+        }
+      } catch (err) {
+        console.error("Erro ao buscar dados técnicos:", err);
+      }
+    }
+  
+    if (id && token) {
+      fetchDados();
+    }
+  }, [id, token]);
 
 
   const normalizarPotenciaKW = (valor: string | number): number => {
@@ -133,7 +173,15 @@ const UsinaDetalhe = () => {
       default:
         return <Badge variant="outline" className="text-lg px-4 py-2">{status}</Badge>;
     }
+
+
   };
+
+  const tensoesStrings = dadosTecnicos.filter((d: any) => d.nome?.startsWith("tensao_string_"));
+  const correntesStrings = dadosTecnicos.filter((d: any) => d.nome?.startsWith("corrente_string_"));
+
+  
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -297,7 +345,7 @@ const UsinaDetalhe = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardHeader className="flex flex-row items-center space-x-2">
-              <Info className="h-5 w-5 text-solar-blue" />
+              <Info className="h-5 w-5 text-solar-orange" />
                 <CardTitle>Informações do Sistema</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -320,32 +368,22 @@ const UsinaDetalhe = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
+
+        
+
+        {/*LISTA DE ALARMES */}
+        
+        <Card className="hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center space-x-2">
-            <Gauge className="h-5 w-5 text-solar-orange" />
-            <CardTitle>Estado Atual do Sistema</CardTitle>
+            <CircleAlert className="h-5 w-5 text-solar-orange" />
+            <CardTitle>Alarmes Recentes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-          <div>
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">Performance Diária</p>
-              <p className="font-medium">{plant.performance_diaria}%</p>
-            </div>
-            <div className="w-full h-2 bg-muted rounded-full mt-2">
-              <div 
-                className={`h-2 rounded-full ${
-                  plant.performance_diaria > 85 ? 'bg-green-500' : 
-                  plant.performance_diaria > 60 ? 'bg-yellow-500' : 'bg-red-500'
-                }`} 
-                style={{ width: `${Math.min(plant.performance_diaria, 100)}%` }}
-              />
-            </div>
-          </div>
-            
+           
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Thermometer className="h-5 w-5 text-solar-blue" />
-                <p className="text-sm text-muted-foreground">Temperatura</p>
+                <CircleAlert className="h-5 w-5 text-solar-blue" />
+                <p className="text-sm text-muted-foreground">Alarme 1</p>
               </div>
               <p className={`font-medium ${plant.temperature > 35 ? 'text-red-500' : plant.temperature > 30 ? 'text-yellow-500' : 'text-green-500'}`}>
                 {plant.temperature > 0 ? `${plant.temperature}°C` : 'N/A'}
@@ -354,8 +392,8 @@ const UsinaDetalhe = () => {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Thermometer className="h-5 w-5 text-solar-blue" />
-                <p className="text-sm text-muted-foreground">Temperatura</p>
+                <CircleAlert className="h-5 w-5 text-solar-blue" />
+                <p className="text-sm text-muted-foreground">Alarme 2</p>
               </div>
               <p className={`font-medium ${plant.temperature > 35 ? 'text-red-500' : plant.temperature > 30 ? 'text-yellow-500' : 'text-green-500'}`}>
                 {plant.temperature > 0 ? `${plant.temperature}°C` : 'N/A'}
@@ -364,6 +402,80 @@ const UsinaDetalhe = () => {
           </CardContent>
         </Card>
         </div>
+                  {/* INFORMAÇÕES TÉCNICAS DO SISTEMA */}
+                  <Card className="hover:shadow-lg transition-shadow duration-300">
+        <CardHeader className="flex flex-row items-center space-x-2">
+          <Gauge className="h-5 w-5 text-solar-orange" />
+          <CardTitle>Informações Técnicas do Sistema</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {dadosTecnicos.map((inversor, idx) => {
+            const tensoes = Object.entries(inversor).filter(([k]) => k.startsWith("tensao_string_"));
+            const correntes = Object.entries(inversor).filter(([k]) => k.startsWith("corrente_string_"));
+            return (
+              <div key={idx} className="space-y-4 border-t pt-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <CircuitBoard className="h-5 w-5 text-solar-orange" />
+                  <p className="text-base font-semibold white">
+                  {inversor.nome_inversor?.toLowerCase().startsWith("inverter")
+                    ? `Inversor ${idx + 1}`
+                    : inversor.nome_inversor || `Inversor ${idx + 1}`}
+                </p>
+                </div>
+
+
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Thermometer className="h-5 w-5 white" />
+                      <p className="text-sm text-muted-foreground">Temperatura de Ar Interna</p>
+                    </div>
+                    <p className={`font-medium ${
+                      inversor.temperatura_interna > 35
+                        ? 'text-red-500'
+                        : inversor.temperatura_interna > 30
+                        ? 'text-yellow-500'
+                        : 'text-green-500'
+                    }`}>
+                      {inversor.temperatura_interna > 0
+                        ? `${inversor.temperatura_interna}°C`
+                        : 'N/A'}
+                    </p>
+                  </div>
+
+
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Gauge className="h-4 w-4 white" />
+                    <p className="text-sm text-muted-foreground">Tensões</p>
+                  </div>
+                  {tensoes.map(([nome, valor]) => (
+                    <div key={nome} className="flex justify-between items-center">
+                      <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, ' ')}</p>
+                      <p className="font-medium">{valor} V</p>
+                    </div>
+                  ))}
+                </div>
+
+                
+                <div className="space-y-1 mt-2">
+                  <div className="flex items-center gap-2">
+                    <Gauge className="h-4 w-4 white" />
+                    <p className="text-sm text-muted-foreground">Correntes</p>
+                  </div>
+                  {correntes.map(([nome, valor]) => (
+                    <div key={nome} className="flex justify-between items-center">
+                      <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, ' ')}</p>
+                      <p className="font-medium">{valor} A</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
       </div>
   );
 };
