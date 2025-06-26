@@ -175,35 +175,37 @@ const Dashboard = () => {
   const [performances30d, setPerformances30d] = useState<{ [plantId: number]: number }>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const carregarDados = async () => {
-      try {
-        const [usinasRes, diariaRes, semanaRes] = await Promise.all([
-          getUsinas(),
-          fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria").then(res => res.json()),
-          fetch("https://backendmonitoramento-production.up.railway.app/performance_7dias").then(res => res.json()),
-          fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias").then(res => res.json())
-        ]);
+useEffect(() => {
+  const carregarTodosOsDados = async () => {
+    try {
+      const [usinas, diaria, semanal, mensal] = await Promise.all([
+        getUsinas(),
+        fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria").then(res => res.json()),
+        fetch("https://backendmonitoramento-production.up.railway.app/performance_7dias").then(res => res.json()),
+        fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias").then(res => res.json())
+      ]);
 
-        setPlants(usinasRes);
+      setPlants(usinas);
 
-        const diariaMap: { [id: number]: number } = {};
-        diariaRes.forEach((p: any) => diariaMap[p.plant_id] = p.performance_percentual);
-        setPerformances(diariaMap);
+      const mapear = (lista) => {
+        const mapa = {};
+        lista.forEach(item => mapa[item.plant_id] = item.performance_percentual);
+        return mapa;
+      };
 
-        const semanaMap: { [id: number]: number } = {};
-        semanaRes.forEach((p: any) => semanaMap[p.plant_id] = p.performance_percentual);
-        setPerformances7d(semanaMap);
-      } catch (error) {
-        toast({ title: "Erro", description: "Falha ao carregar dados." });
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setPerformances(mapear(diaria));
+      setPerformances7d(mapear(semanal));
+      setPerformances30d(mapear(mensal));
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+      toast({ title: "Erro", description: "Falha ao carregar dados." });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    carregarDados();
-  }, [toast]);
+  carregarTodosOsDados();
+}, [toast]);
 
   // Atualiza performance mensal a cada 2 minutos
 
@@ -264,6 +266,7 @@ const Dashboard = () => {
           perfMap[item.plant_id] = item.performance_percentual;
         });
         setPerformances(perfMap);
+        console.log("📊 Performance diária carregada:", perfMap);
       } catch (error) {
         console.error("Erro ao buscar performance diária:", error);
       }

@@ -68,8 +68,11 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
             production: item.production
           })));
           if (responseData.p1) {
-          console.log("🔵 Valor de p1 (geração total):", responseData.p1);
-          setTotalP1(responseData.p1);
+  console.log("🔵 Valor de p1 (geração total):", responseData.p1);
+  setTotalP1(responseData.p1);
+  if (onTotalChange) {
+    onTotalChange(responseData.p1); // <- ✅ chama o callback para UsinaDetalhe
+  }
 }
 
 console.log("🟢 Valores de p24 (produção por horário):", responseData.diario);
@@ -80,6 +83,9 @@ console.log("🟢 Valores de p24 (produção por horário):", responseData.diari
             production: item.production
           })));
           setTotalP1(responseData.total);
+          if (onTotalChange) {
+            onTotalChange(responseData.total); // ✅ envia total mensal
+          }
 
         } else if (periodType === 'year' && Array.isArray(responseData.anual)) {
           console.log("Dados ano:", responseData.anual);
@@ -88,6 +94,9 @@ console.log("🟢 Valores de p24 (produção por horário):", responseData.diari
             production: item.production
           })));
           setTotalP1(responseData.total);
+          if (onTotalChange) {
+            onTotalChange(responseData.total); // ✅ envia total anual
+          }
 
         } else {
           console.warn("Formato de dados inesperado:", responseData);
@@ -139,11 +148,6 @@ console.log("🟢 Valores de p24 (produção por horário):", responseData.diari
           />
         </LineChart>
       </ResponsiveContainer>
-      {totalP1 !== null && (
-        <div className="text-center mt-6 text-lg font-semibold text-white">
-          Geração Total: {totalP1.toLocaleString('pt-BR')} kWh
-        </div>
-      )}
     </div>
   );
 };

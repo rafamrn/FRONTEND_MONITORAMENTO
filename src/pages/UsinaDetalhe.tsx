@@ -160,7 +160,8 @@ const UsinaDetalhe = () => {
     }
   };
 
-  const economiaEstimada = parseFloat((plant.today_energy * 0.95).toFixed(2));
+  const economiaEstimada = totalGerado !== null ? parseFloat((totalGerado * 0.95).toFixed(2)) : 0;
+
 
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
@@ -221,15 +222,13 @@ const UsinaDetalhe = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-scale-in">
         <Card className="hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="pb-2">
-            <CardTitle className="text-solar-blue">Geração do Dia</CardTitle>
+            <CardTitle className="text-solar-blue">Geração</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{plant.today_energy.toLocaleString('pt-BR')} kWh </div>
-              {plant.monthlyGrowth !== 0 && (
-              <p className={`text-sm ${plant.monthlyGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {plant.monthlyGrowth > 0 ? '+' : ''}{plant.monthlyGrowth}% comparado ao dia anterior
-              </p>
-            )}
+              <div className="text-3xl font-bold">
+                {totalGerado !== null ? `${totalGerado.toLocaleString('pt-BR')} kWh` : 'Carregando...'}
+              </div>
+            <p className="text-sm text-muted-foreground">período analisado</p>
           </CardContent>
             </Card>
 {/* Economia Estimada */}
@@ -310,13 +309,6 @@ const UsinaDetalhe = () => {
       />
     )}
   </div>
-  {totalGerado !== null && (
-    <div className="flex justify-center mt-6">
-      <p className="text-2xl font-bold text-white">
-        Total gerado: {totalGerado.toLocaleString('pt-BR')} kWh
-      </p>
-    </div>
-  )}
 </CardContent>
           </Card>
         </div>
