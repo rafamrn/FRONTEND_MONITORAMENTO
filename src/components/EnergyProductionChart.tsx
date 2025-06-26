@@ -67,7 +67,12 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
             time: item.time,
             production: item.production
           })));
-          if (responseData.p1) setTotalP1(responseData.p1);
+          if (responseData.p1) {
+          console.log("🔵 Valor de p1 (geração total):", responseData.p1);
+          setTotalP1(responseData.p1);
+}
+
+console.log("🟢 Valores de p24 (produção por horário):", responseData.diario);
 
         } else if (periodType === 'month' && Array.isArray(responseData.mensal)) {
           setData(responseData.mensal.map((item: any) => ({

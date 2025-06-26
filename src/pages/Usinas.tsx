@@ -57,7 +57,7 @@ const Usinas = () => {
     async function carregarProjecoesTodas() {
       for (const plant of powerPlants) {
         try {
-          const res = await fetch(`https://SEU-BACKEND.onrailway.app/projecoes/${plant.ps_id}?year=2025`);
+          const res = await fetch(`backendmonitoramento-production.up.railway.app/projecoes/${plant.ps_id}?year=2025`);
           const data = await res.json();
           setDadosProjecao(prev => ({ ...prev, [plant.ps_id]: data }));
         } catch (error) {
@@ -79,29 +79,31 @@ const Usinas = () => {
   };
 
   const carregarProjecoesSalvas = async (plantId: number) => {
-    try {
-      const res = await fetch(`https://SEU-BACKEND.onrailway.app/projecoes/${plantId}?year=2025`);
-      const data = await res.json();
+  try {
+    const res = await fetch(`https://backendmonitoramento-production.up.railway.app/projecoes/${plantId}?year=2025`);
+    const data = await res.json();
 
-      const numeroParaMes: { [key: number]: string } = {
-        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
-        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
-        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
-      };
+    const numeroParaMes: { [key: number]: string } = {
+      1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+      5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+      9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+    };
 
-      const dados: { [key: string]: number } = {};
-      data.forEach((item: { month: number; projection_kwh: number }) => {
-        const nomeMes = numeroParaMes[item.month];
-        if (nomeMes) {
-          dados[nomeMes] = item.projection_kwh;
-        }
-      });
+    const dadosParaInputs: { [key: string]: number } = {};
+    data.forEach((item: { month: number; projection_kwh: number }) => {
+      const nomeMes = numeroParaMes[item.month];
+      if (nomeMes) {
+        dadosParaInputs[nomeMes] = item.projection_kwh;
+      }
+    });
 
-      setMonthlyGeneration(dados);
-    } catch (error) {
-      console.error("Erro ao carregar projeções salvas:", error);
-    }
-  };
+    // Atualiza os estados
+    setMonthlyGeneration(dadosParaInputs);
+    setDadosProjecao(prev => ({ ...prev, [plantId]: data }));
+  } catch (error) {
+    console.error("Erro ao carregar projeções salvas:", error);
+  }
+};
 
   const handleSaveGeneration = async () => {
     if (!selectedPlant) return;
@@ -132,8 +134,30 @@ const Usinas = () => {
 
       const data = await res.json();
       alert("Projeções salvas com sucesso!");
-      setSelectedPlant(null);
-      setMonthlyGeneration({});
+
+// Atualiza dadosProjecao com os novos valores
+setDadosProjecao(prev => ({
+  ...prev,
+  [selectedPlant]: projections.map(p => ({
+    month: p.month,
+    projection_kwh: p.kwh
+  }))
+}));
+
+// Atualiza os inputs com os valores recém salvos
+const nomeMes: { [key: number]: string } = {
+  1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+  5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+  9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+};
+
+const novosDados: { [key: string]: number } = {};
+projections.forEach(({ month, kwh }) => {
+  const nome = nomeMes[month];
+  if (nome) novosDados[nome] = kwh;
+});
+
+setMonthlyGeneration(novosDados);
     } catch (error) {
       console.error("Erro ao salvar projeções:", error);
       alert("Erro ao salvar projeções.");
@@ -170,19 +194,6 @@ const Usinas = () => {
                 </div>
               </div>
 
-              {dadosProjecao[plant.ps_id]?.length > 0 && (
-                <div className="text-sm border-t pt-2">
-                  <p className="font-semibold mb-1 text-gray-500">Projeção (kWh):</p>
-                  <ul className="space-y-1">
-                    {dadosProjecao[plant.ps_id].map((item) => (
-                      <li key={item.month} className="flex justify-between">
-                        <span>{monthNumberToName(item.month)}:</span>
-                        <span>{item.projection_kwh.toFixed(0)} kWh</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </CardContent>
 
             <CardFooter>
@@ -191,10 +202,10 @@ const Usinas = () => {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => {
-                      setSelectedPlant(plant.ps_id);
-                      carregarProjecoesSalvas(plant.ps_id);
-                    }}
+                    onClick={async () => {
+  setSelectedPlant(plant.ps_id);
+  await carregarProjecoesSalvas(plant.ps_id); // preenche o formulário ANTES de abrir
+}}
                   >
                     <Plus size={16} className="mr-2" />
                     Projeção Mensal
