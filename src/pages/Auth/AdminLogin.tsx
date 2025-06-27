@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -13,75 +14,58 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Shield } from "lucide-react";
 
-const loginSchema = z.object({
+const adminLoginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type AdminLoginFormValues = z.infer<typeof adminLoginSchema>;
 
-const Login = () => {
+const AdminLogin = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<AdminLoginFormValues>({
+    resolver: zodResolver(adminLoginSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: AdminLoginFormValues) => {
     setIsLoading(true);
-    try {
-      const response = await fetch("https://backendmonitoramento-production.up.railway.app/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          username: data.email,
-          password: data.password,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.detail || "Erro ao fazer login");
+    
+    // Simulate admin login - in production, verify against admin credentials
+    setTimeout(() => {
+      // Check if it's admin credentials (you can customize this logic)
+      if (data.email === "contato@rms7energia.com" && data.password === "admin123") {
+        localStorage.setItem("adminUser", JSON.stringify({ 
+          name: "Administrador",
+          email: data.email,
+          role: "admin"
+        }));
+        
+        toast({
+          title: "Login administrativo bem-sucedido",
+          description: "Bem-vindo ao painel administrativo",
+        });
+        
+        navigate("/admin");
+      } else {
+        toast({
+          title: "Erro no login",
+          description: "Credenciais de administrador inválidas",
+          variant: "destructive",
+        });
       }
-
-      // Armazenar token
-      localStorage.setItem("token", result.access_token);
-
-      // Opcional: simular dados do usuário com o e-mail
-      const mockUser = {
-        name: "Usuário",
-        email: data.email,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.email}`,
-      };
-      localStorage.setItem("user", JSON.stringify(mockUser));
-
-      toast({
-        title: "Login bem-sucedido",
-        description: "Você foi autenticado com sucesso",
-      });
-
-      navigate("/"); // ou diretamente para /usinas se preferir
-    } catch (error: any) {
-      toast({
-        title: "Erro no login",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
       setIsLoading(false);
-    }
+    }, 1500);
   };
 
   return (
@@ -91,9 +75,9 @@ const Login = () => {
           <div className="flex items-center justify-center w-50 h-20 mb-4">
             <img src="/favicon2.ico" alt="Logo" className="w-full h-full object-contain" />
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Login Administrativo</CardTitle>
           <CardDescription>
-            Entre com suas credenciais para acessar o sistema
+            Acesso restrito para administradores do sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -104,9 +88,9 @@ const Login = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Login</FormLabel>
                     <FormControl>
-                      <Input placeholder="seu@email.com" {...field} />
+                      <Input placeholder="Login" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -125,25 +109,27 @@ const Login = () => {
                   </FormItem>
                 )}
               />
-              <div className="text-right text-sm">
-                <Link to="/esqueci-senha" className="text-solar-orange hover:underline">
-                  Esqueceu a senha?
-                </Link>
-              </div>
               <Button 
-              type="submit" 
-              className="w-full bg-solar-blue hover:bg-solar-blue/90 hover:shadow-[0_0_12px_rgba(0,123,255,0.8)] transition-all duration-300"
-              disabled={isLoading}
-            >
-              {isLoading ? "Entrando..." : "Entrar"}
-            </Button>
+                type="submit" 
+                className="w-full bg-red-600 hover:bg-red-700"
+                disabled={isLoading}
+              >
+                {isLoading ? "Entrando..." : "Entrar como Admin"}
+              </Button>
             </form>
           </Form>
         </CardContent>
-
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-gray-500">
+            Acesso para clientes?{" "}
+            <Link to="/login" className="text-solar-orange hover:underline">
+              Login Cliente
+            </Link>
+          </p>
+        </CardFooter>
       </Card>
     </div>
   );
 };
 
-export default Login;
+export default AdminLogin;

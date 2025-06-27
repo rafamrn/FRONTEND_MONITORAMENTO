@@ -17,6 +17,11 @@ import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import NotFound from "./pages/NotFound";
+import AdminLogin from "./pages/Auth/AdminLogin"
+import Admin from "./pages/Admin"
+import AdminLayout from "./components/AdminLayout";
+import AdminChat from "./pages/AdminChat";
+import AdminConfiguracoes from "./pages/AdminConfiguracoes";
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -54,6 +59,16 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Register />} />
               <Route path="/esqueci-senha" element={<ForgotPassword />} />
+
+              {/* Admin Auth Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Admin />} />
+                <Route path="chat" element={<AdminChat />} />
+                <Route path="configuracoes" element={<AdminConfiguracoes />} />
+              </Route>
 
               {/* Rotas protegidas */}
               <Route element={<RequireAuth />}>
