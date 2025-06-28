@@ -47,15 +47,48 @@ const manufacturers = [
 // Login Dialog Component
 const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
   const { toast } = useToast();
-  
-  const handleLogin = (e: React.FormEvent) => {
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Integração iniciada",
-      description: `Conectando com ${manufacturer.name}...`,
-    });
+
+    const token = localStorage.getItem("token");
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/integracoes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          plataforma: manufacturer.name,
+          usuario: username,
+          senha: password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.detail || "Erro ao integrar com a plataforma.");
+      }
+
+      toast({
+        title: "Integração realizada",
+        description: `Conectado com ${manufacturer.name}`,
+      });
+    } catch (error: any) {
+      console.error("Erro ao conectar:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao tentar integrar",
+        variant: "destructive",
+      });
+    }
   };
-  
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -74,11 +107,22 @@ const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="username">Usuário</Label>
-              <Input id="username" placeholder="Seu nome de usuário" />
+              <Input
+                id="username"
+                placeholder="Seu nome de usuário"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" placeholder="Sua senha" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="Sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>

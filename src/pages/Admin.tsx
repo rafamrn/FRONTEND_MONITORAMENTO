@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -45,28 +45,31 @@ const Admin = () => {
   const [clients, setClients] = useState<Client[]>([]);
 
   // Mock data for integrations
-  const [integrations, setIntegrations] = useState<Integration[]>([
-    {
-      id: '1',
-      clientId: '1',
-      clientName: 'João Silva',
-      platform: 'SolarEdge',
-      username: 'joao.solaredge',
-      password: '********',
-      status: 'active',
-      lastSync: '2024-01-20 10:30'
-    },
-    {
-      id: '2',
-      clientId: '2',
-      clientName: 'Maria Santos',
-      platform: 'Huawei',
-      username: 'maria.huawei',
-      password: '********',
-      status: 'active',
-      lastSync: '2024-01-19 15:45'
-    }
-  ]);
+const [integrations, setIntegrations] = useState<Integration[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    fetch(`${import.meta.env.VITE_API_URL}/integracoes`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const error = await res.text();
+          throw new Error(error || "Erro ao buscar integrações.");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setIntegrations(data);
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar integrações:", err);
+      });
+  }, []);
 
   const getStatusBadge = (status: string) => {
     const variants = {
