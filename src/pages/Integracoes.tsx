@@ -43,6 +43,10 @@ const manufacturers = [
   },
 ];
 
+const getApiUrl = () => {
+  const rawUrl = import.meta.env.VITE_API_URL;
+  return rawUrl?.replace(/^http:\/\//, "https://").replace(/\/+$/, "");
+};
 
 // Login Dialog Component
 const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
@@ -51,23 +55,26 @@ const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
   const [password, setPassword] = React.useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  const token = localStorage.getItem("token");
 
-    const token = localStorage.getItem("token");
+    
+      try {
+    const url = `${getApiUrl()}/integracoes`;
+    console.log("POST para:", url);
 
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/integracoes`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          plataforma: manufacturer.name,
-          usuario: username,
-          senha: password,
-        }),
-      });
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        plataforma: manufacturer.name,
+        usuario: username,
+        senha: password,
+      }),
+    });
 
       const data = await res.json();
 
@@ -76,18 +83,18 @@ const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
       }
 
       toast({
-        title: "Integração realizada",
-        description: `Conectado com ${manufacturer.name}`,
-      });
-    } catch (error: any) {
-      console.error("Erro ao conectar:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao tentar integrar",
-        variant: "destructive",
-      });
-    }
-  };
+      title: "Integração realizada",
+      description: `Conectado com ${manufacturer.name}`,
+    });
+  } catch (error: any) {
+    console.error("Erro ao conectar:", error);
+    toast({
+      title: "Erro",
+      description: error.message || "Erro ao tentar integrar",
+      variant: "destructive",
+    });
+  }
+};
 
   return (
     <Dialog>
