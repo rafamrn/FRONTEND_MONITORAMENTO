@@ -40,41 +40,7 @@ const Admin = () => {
   const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
   
   // Mock data for clients
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: '1',
-      name: 'João Silva',
-      email: 'joao@empresa.com',
-      company: 'Empresa Solar Ltda',
-      plan: 'Professional',
-      status: 'active',
-      paymentStatus: 'up-to-date',
-      lastPayment: '2024-01-15',
-      createdAt: '2023-12-01'
-    },
-    {
-      id: '2',
-      name: 'Maria Santos',
-      email: 'maria@solarcorp.com',
-      company: 'Solar Corp',
-      plan: 'Enterprise',
-      status: 'active',
-      paymentStatus: 'overdue',
-      lastPayment: '2023-12-15',
-      createdAt: '2023-11-15'
-    },
-    {
-      id: '3',
-      name: 'Pedro Costa',
-      email: 'pedro@renewenergy.com',
-      company: 'Renew Energy',
-      plan: 'Basic',
-      status: 'inactive',
-      paymentStatus: 'cancelled',
-      lastPayment: '2023-11-01',
-      createdAt: '2023-10-20'
-    }
-  ]);
+  const [clients, setClients] = useState<Client[]>([]);
 
   // Mock data for integrations
   const [integrations, setIntegrations] = useState<Integration[]>([
@@ -126,10 +92,29 @@ const Admin = () => {
     });
   };
 
-  const handleCreateClient = (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    
+const handleCreateClient = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const formData = new FormData(e.target as HTMLFormElement);
+
+  const payload = {
+    email: formData.get("email"),
+    password: formData.get("password"),
+  };
+
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.detail || "Erro ao criar usuário.");
+    }
+
+    // ✅ Se tudo deu certo, adiciona localmente à tabela da interface
     const newClient: Client = {
       id: Math.random().toString(36).substr(2, 9),
       name: formData.get('name') as string,
@@ -144,12 +129,22 @@ const Admin = () => {
 
     setClients([...clients, newClient]);
     setIsNewClientDialogOpen(false);
-    
+
     toast({
       title: "Cliente criado",
       description: "Novo cliente foi adicionado com sucesso.",
     });
-  };
+
+    (e.target as HTMLFormElement).reset();
+
+  } catch (error: any) {
+    toast({
+      title: "Erro",
+      description: error.message || "Não foi possível criar o usuário.",
+      variant: "destructive",
+    });
+  }
+};
 
   const togglePasswordVisibility = (integrationId: string) => {
     setShowPasswords(prev => ({
@@ -210,6 +205,10 @@ const Admin = () => {
                           <Label htmlFor="email">Email</Label>
                           <Input id="email" name="email" type="email" placeholder="email@exemplo.com" required />
                         </div>
+                        <div className="grid gap-2">
+                        <Label htmlFor="password">Senha</Label>
+                        <Input id="password" name="password" type="password" placeholder="Senha de acesso" required />
+                      </div>
                         <div className="grid gap-2">
                           <Label htmlFor="company">Empresa</Label>
                           <Input id="company" name="company" placeholder="Nome da empresa" required />
