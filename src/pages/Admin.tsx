@@ -11,6 +11,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { Users, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
 
+console.log("API URL:", import.meta.env.VITE_API_URL);
+
 interface Client {
   id: string;
   name: string;
@@ -102,17 +104,23 @@ const handleCreateClient = async (e: React.FormEvent) => {
   };
 
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    const data = await res.json();
+      // ✅ Evita erro se a resposta não for JSON
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        // resposta vazia, mantém `data` como null
+      }
 
-    if (!res.ok) {
-      throw new Error(data.detail || "Erro ao criar usuário.");
-    }
+      if (!res.ok) {
+        throw new Error(data?.detail || "Erro ao criar usuário.");
+      }
 
     // ✅ Se tudo deu certo, adiciona localmente à tabela da interface
     const newClient: Client = {
