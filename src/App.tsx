@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
 import { ThemeProvider } from "./components/ThemeProvider";
 import AppLayout from "./components/AppLayout";
 import RequireAuth from "./components/RequireAuth";
-
 import Dashboard from "./pages/Dashboard";
 import Usinas from "./pages/Usinas";
 import UsinaDetalhe from "./pages/UsinaDetalhe";
@@ -22,7 +20,6 @@ import Admin from "./pages/Admin"
 import AdminLayout from "./components/AdminLayout";
 import AdminChat from "./pages/AdminChat";
 import AdminConfiguracoes from "./pages/AdminConfiguracoes";
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -59,6 +56,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Register />} />
               <Route path="/esqueci-senha" element={<ForgotPassword />} />
+              <Route path="/dashboard/:userId" element={<Dashboard />} />
 
               {/* Admin Auth Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
