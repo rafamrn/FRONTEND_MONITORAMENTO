@@ -27,13 +27,12 @@ interface Client {
 
 interface Integration {
   id: string;
-  clientId: string;
-  clientName: string;
-  platform: string;
+  cliente_id: string;
+  plataforma: string;
   username: string;
-  password: string;
-  status: 'active' | 'inactive';
-  lastSync: string;
+  senha: string;
+  status: string;
+  ultima_sincronizacao?: string;
 }
 
 const Admin = () => {
@@ -50,29 +49,30 @@ const Admin = () => {
       .catch(err => console.error("Erro ao buscar clientes:", err));
   }, []);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+useEffect(() => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
 
-    fetch(`${import.meta.env.VITE_API_URL}/integracoes`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  fetch(`${import.meta.env.VITE_API_URL}/admin/integracoes`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error || "Erro ao buscar integrações.");
+      }
+      return res.json();
     })
-      .then(async (res) => {
-        if (!res.ok) {
-          const error = await res.text();
-          throw new Error(error || "Erro ao buscar integrações.");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setIntegrations(data);
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar integrações:", err);
-      });
-  }, []);
+    .then((data) => {
+      setIntegrations(data);
+      console.log("🔍 Integrações recebidas:", data);
+    })
+    .catch((err) => {
+      console.error("Erro ao buscar integrações:", err);
+    });
+}, []);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -333,55 +333,67 @@ const payload = {
             </CardHeader>
             <CardContent>
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Plataforma</TableHead>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Senha</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Última Sincronização</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {integrations.map((integration) => (
-                    <TableRow key={integration.id}>
-                      <TableCell>
-                        <div className="font-medium">{integration.clientName}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{integration.platform}</Badge>
-                      </TableCell>
-                      <TableCell>{integration.username}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm">
-                            {showPasswords[integration.id] ? 'senhaSecreta123' : '••••••••••••'}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => togglePasswordVisibility(integration.id)}
-                          >
-                            {showPasswords[integration.id] ? (
-                              <EyeOff className="w-4 h-4" />
-                            ) : (
-                              <Eye className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusBadge(integration.status)}>
-                          {integration.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {integration.lastSync}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+<TableHeader>
+  <TableRow>
+    <TableHead>ID</TableHead>
+    <TableHead>Cliente</TableHead>
+    <TableHead>Plataforma</TableHead>
+    <TableHead>Username</TableHead>
+    <TableHead>Senha</TableHead>
+    <TableHead>X Access Key</TableHead>
+    <TableHead>Appkey</TableHead>
+    <TableHead>Status</TableHead>
+    <TableHead>Última Sincronização</TableHead>
+  </TableRow>
+</TableHeader>
+<TableBody>
+  {integrations.map((integration) => (
+    <TableRow key={integration.id}>
+      <TableCell>{integration.id}</TableCell>
+      <TableCell>
+        <div className="font-medium">
+          {integration.cliente_id
+            ? clients.find(c => c.id === integration.cliente_id.toString())?.name || '—'
+            : '—'}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">{integration.plataforma}</Badge>
+      </TableCell>
+      <TableCell>{integration.username}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm">
+            {showPasswords[integration.id] ? integration.senha : '••••••••••••'}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => togglePasswordVisibility(integration.id)}
+          >
+            {showPasswords[integration.id] ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+      </TableCell>
+      <TableCell>{integration.x_access_key || '—'}</TableCell>
+      <TableCell>{integration.appkey || '—'}</TableCell>
+      <TableCell>
+        <Badge className={getStatusBadge(integration.status)}>
+          {integration.status === 'active' ? 'Ativo' : 'Inativo'}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {integration.ultima_sincronizacao
+          ? new Date(integration.ultima_sincronizacao).toLocaleString("pt-BR")
+          : '—'}
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
               </Table>
             </CardContent>
           </Card>

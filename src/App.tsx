@@ -36,9 +36,17 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
+  const checkToken = () => {
     const token = localStorage.getItem("token");
     setIsAuthenticated(!!token);
-  }, []);
+  };
+
+  checkToken();
+
+  // Ouvinte para atualizações futuras (ex: outro tab ou login novo)
+  window.addEventListener("storage", checkToken);
+  return () => window.removeEventListener("storage", checkToken);
+}, []);
 
   if (isAuthenticated === null) {
     return null; // ou um spinner

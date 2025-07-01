@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -16,7 +15,6 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Shield } from "lucide-react";
 
 const adminLoginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -40,32 +38,49 @@ const AdminLogin = () => {
 
   const onSubmit = async (data: AdminLoginFormValues) => {
     setIsLoading(true);
-    
-    // Simulate admin login - in production, verify against admin credentials
-    setTimeout(() => {
-      // Check if it's admin credentials (you can customize this logic)
-      if (data.email === "contato@rms7energia.com" && data.password === "admin123") {
-        localStorage.setItem("adminUser", JSON.stringify({ 
-          name: "Administrador",
-          email: data.email,
-          role: "admin"
-        }));
-        
-        toast({
-          title: "Login administrativo bem-sucedido",
-          description: "Bem-vindo ao painel administrativo",
-        });
-        
-        navigate("/admin");
-      } else {
-        toast({
-          title: "Erro no login",
-          description: "Credenciais de administrador inválidas",
-          variant: "destructive",
-        });
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          username: data.email,
+          password: data.password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Credenciais inválidas");
       }
+
+      const result = await response.json();
+
+      // Salva o token no localStorage
+      localStorage.setItem("token", result.access_token);
+
+      // Salva o adminUser no localStorage (necessário para o AdminLayout)
+      localStorage.setItem("adminUser", JSON.stringify({
+        email: data.email,
+        role: "admin"
+      }));
+
+      toast({
+        title: "Login bem-sucedido",
+        description: "Bem-vindo ao painel administrativo",
+      });
+
+      navigate("/admin");
+    } catch (error) {
+      toast({
+        title: "Erro no login",
+        description: (error as Error).message || "Erro inesperado",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
