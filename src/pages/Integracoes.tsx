@@ -58,8 +58,7 @@ const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
   e.preventDefault();
   const token = localStorage.getItem("token");
 
-    
-      try {
+  try {
     const url = `${getApiUrl()}/integracoes/`;
     console.log("POST para:", url);
 
@@ -71,18 +70,18 @@ const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
       },
       body: JSON.stringify({
         plataforma: manufacturer.name,
-        usuario: username,
+        username: username,  // ✅ aqui
         senha: password,
       }),
     });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data?.detail || "Erro ao integrar com a plataforma.");
-      }
+    if (!res.ok) {
+      throw new Error(data?.detail || "Erro ao integrar com a plataforma.");
+    }
 
-      toast({
+    toast({
       title: "Integração realizada",
       description: `Conectado com ${manufacturer.name}`,
     });
