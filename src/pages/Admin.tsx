@@ -40,12 +40,15 @@ const Admin = () => {
   const { toast } = useToast();
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
   const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
-  
-  // Mock data for clients
   const [clients, setClients] = useState<Client[]>([]);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
 
-  // Mock data for integrations
-const [integrations, setIntegrations] = useState<Integration[]>([]);
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/clientes`)
+      .then(res => res.json())
+      .then(setClients)
+      .catch(err => console.error("Erro ao buscar clientes:", err));
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -89,73 +92,82 @@ const [integrations, setIntegrations] = useState<Integration[]>([]);
     return variants[status as keyof typeof variants] || 'bg-gray-100 text-gray-800';
   };
 
-  const handleDeleteClient = (clientId: string) => {
+  const handleDeleteClient = async (clientId: string) => {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/clientes/${clientId}`, {
+      method: "DELETE",
+    });
     setClients(clients.filter(client => client.id !== clientId));
+
     toast({
       title: "Cliente removido",
       description: "O cliente foi removido com sucesso.",
     });
-  };
+  } catch (err: any) {
+    toast({
+      title: "Erro",
+      description: err.message || "Erro ao excluir cliente.",
+      variant: "destructive",
+    });
+  }
+};
 
-const handleCreateClient = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const formData = new FormData(e.target as HTMLFormElement);
+  const handleCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
 
-  const payload = {
-    email: formData.get("email"),
-    password: formData.get("password"),
-  };
+const payload = {
+  name: formData.get('name'),
+  email: formData.get('email'),
+  password: formData.get('password'), // ✅ ADICIONAR ISSO
+  company: formData.get('company'),
+  plan: formData.get('plan'),
+  status: 'active',
+  payment_status: 'up-to-date',
+  last_payment: new Date().toISOString().split('T')[0],
+  created_at: new Date().toISOString().split('T')[0]
+};
 
-  try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/clientes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      // ✅ Evita erro se a resposta não for JSON
-      let data = null;
-      try {
-        data = await res.json();
-      } catch {
-        // resposta vazia, mantém `data` como null
-      }
+      const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data?.detail || "Erro ao criar usuário.");
+        throw new Error(data?.detail || "Erro ao criar cliente.");
       }
 
-    // ✅ Se tudo deu certo, adiciona localmente à tabela da interface
-    const newClient: Client = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-      company: formData.get('company') as string,
-      plan: formData.get('plan') as string,
-      status: 'active',
-      paymentStatus: 'up-to-date',
-      lastPayment: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+      setClients([...clients, {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        company: data.company,
+        plan: data.plan,
+        status: data.status,
+        paymentStatus: data.payment_status,
+        lastPayment: data.last_payment,
+        createdAt: data.created_at,
+      }]);
 
-    setClients([...clients, newClient]);
-    setIsNewClientDialogOpen(false);
+      setIsNewClientDialogOpen(false);
+      (e.target as HTMLFormElement).reset();
 
-    toast({
-      title: "Cliente criado",
-      description: "Novo cliente foi adicionado com sucesso.",
-    });
-
-    (e.target as HTMLFormElement).reset();
-
-  } catch (error: any) {
-    toast({
-      title: "Erro",
-      description: error.message || "Não foi possível criar o usuário.",
-      variant: "destructive",
-    });
-  }
-};
+      toast({
+        title: "Cliente criado",
+        description: "Novo cliente foi adicionado com sucesso.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível criar o cliente.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const togglePasswordVisibility = (integrationId: string) => {
     setShowPasswords(prev => ({
