@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight } from "lucide-react";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,92 +54,114 @@ const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
   const { toast } = useToast();
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [open, setOpen] = React.useState(false); // controla o Dialog de login
+  const [showConfirm, setShowConfirm] = React.useState(false); // controla o Dialog de confirmação
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const token = localStorage.getItem("token");
+    e.preventDefault();
+    const token = localStorage.getItem("token");
 
-  try {
-    const url = `${getApiUrl()}/integracoes/`;
-    console.log("POST para:", url);
+    try {
+      const url = `${getApiUrl()}/integracoes/`;
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        plataforma: manufacturer.name,
-        username: username,  // ✅ aqui
-        senha: password,
-      }),
-    });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          plataforma: manufacturer.name,
+          username: username,
+          senha: password,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      throw new Error(data?.detail || "Erro ao integrar com a plataforma.");
+      if (!res.ok) {
+        throw new Error(data?.detail || "Erro ao integrar com a plataforma.");
+      }
+
+      toast({
+        title: "Dados enviados",
+        description: `Aguardando integração com ${manufacturer.name}`,
+      });
+
+      // Fecha o form de login e mostra confirmação
+      setOpen(false);
+      setShowConfirm(true);
+    } catch (error: any) {
+      console.error("Erro ao conectar:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao tentar integrar",
+        variant: "destructive",
+      });
     }
-
-    toast({
-      title: "Integração realizada",
-      description: `Conectado com ${manufacturer.name}`,
-    });
-  } catch (error: any) {
-    console.error("Erro ao conectar:", error);
-    toast({
-      title: "Erro",
-      description: error.message || "Erro ao tentar integrar",
-      variant: "destructive",
-    });
-  }
-};
+  };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button className="bg-solar-orange hover:bg-solar-orange/90">
-          <ArrowRight className="mr-2 h-4 w-4" /> Acessar
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Login - {manufacturer.name}</DialogTitle>
-          <DialogDescription>
-            Insira suas credenciais para integrar com {manufacturer.name}.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleLogin}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="username">Usuário</Label>
-              <Input
-                id="username"
-                placeholder="Seu nome de usuário"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="bg-solar-orange hover:bg-solar-orange/90">
+            <ArrowRight className="mr-2 h-4 w-4" /> Acessar
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Login - {manufacturer.name}</DialogTitle>
+            <DialogDescription>
+              Insira suas credenciais para integrar com {manufacturer.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleLogin}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="username">Usuário</Label>
+                <Input
+                  id="username"
+                  placeholder="Seu nome de usuário"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" className="bg-solar-blue hover:bg-solar-blue/90">
-              Conectar
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              <Button type="submit" className="bg-solar-blue hover:bg-solar-blue/90">
+                Conectar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmação */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dados enviados com sucesso</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os dados foram enviados para integração com {manufacturer.name}. Em até 48h a integração será realizada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button onClick={() => setShowConfirm(false)}>OK</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
