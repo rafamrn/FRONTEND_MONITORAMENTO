@@ -60,7 +60,7 @@ const LoginDialog = ({ manufacturer }: { manufacturer: any }) => {
 
     
       try {
-    const url = `${getApiUrl()}/integracoes`;
+    const url = `${getApiUrl()}/integracoes/`;
     console.log("POST para:", url);
 
     const res = await fetch(url, {
