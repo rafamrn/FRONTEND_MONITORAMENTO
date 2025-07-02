@@ -23,6 +23,7 @@ const registerSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }),
   confirmPassword: z.string(),
+  token: z.string().uuid({ message: "Token inválido" }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
@@ -38,34 +39,51 @@ const Register = () => {
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    token: "",
+  },
   });
 
-  const onSubmit = async (data: RegisterFormValues) => {
-    setIsLoading(true);
-    
-    // Simulate registration - replace with actual API call in production
-    setTimeout(() => {
-      toast({
-        title: "Registro bem-sucedido",
-        description: "Sua conta foi criada com sucesso",
-      });
-      
-      navigate("/login");
-      setIsLoading(false);
-    }, 1500);
-  };
+const onSubmit = async (data: RegisterFormValues) => {
+  setIsLoading(true);
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.detail || "Erro ao registrar");
+    }
+
+    toast({
+      title: "Registro concluído",
+      description: "Sua conta foi criada com sucesso!",
+    });
+
+    navigate("/login");
+  } catch (error: any) {
+    toast({
+      title: "Erro",
+      description: error.message,
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 flex flex-col items-center">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-solar-blue mb-4">
-            <Sun className="h-6 w-6 text-solar-orange" />
+          <div className="flex items-center justify-center w-50 h-20 mb-4">
+            <img src="/favicon2.ico" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Cadastro</CardTitle>
           <CardDescription>
@@ -125,6 +143,19 @@ const Register = () => {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
+                )}
+              />
+          <FormField
+            control={form.control}
+            name="token"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Token</FormLabel>
+                <FormControl>
+                  <Input placeholder="Cole o token recebido por e-mail" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
                 )}
               />
               <Button 

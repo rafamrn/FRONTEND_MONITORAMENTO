@@ -55,8 +55,8 @@ const ForgotPassword = () => {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 flex flex-col items-center">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-solar-blue mb-4">
-            <Sun className="h-6 w-6 text-solar-orange" />
+          <div className="flex items-center justify-center w-50 h-20 mb-4">
+            <img src="/favicon2.ico" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Esqueceu a senha?</CardTitle>
           <CardDescription>

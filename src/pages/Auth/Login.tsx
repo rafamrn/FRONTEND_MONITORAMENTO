@@ -140,6 +140,14 @@ const Login = () => {
             </form>
           </Form>
         </CardContent>
+        <CardFooter className="flex justify-center">
+  <p className="text-sm text-gray-500">
+    Ainda não tem uma conta?{" "}
+    <Link to="/cadastro" className="text-solar-orange hover:underline ml-1">
+      Cadastre-se
+    </Link>
+  </p>
+</CardFooter>
 
       </Card>
     </div>

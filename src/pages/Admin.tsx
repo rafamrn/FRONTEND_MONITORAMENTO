@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
+import { toast } from "@/hooks/use-toast";
 
 console.log("API URL:", import.meta.env.VITE_API_URL);
 
@@ -26,21 +27,149 @@ interface Client {
 }
 
 interface Integration {
-  id: string;
-  cliente_id: string;
+  id: number;
+  cliente_id: number;
+  nome?: string;
   plataforma: string;
   username: string;
   senha: string;
+  appkey: string | null;
+  x_access_key: string | null;
   status: string;
   ultima_sincronizacao?: string;
 }
 
+
+
+
+const salvarChaves = async (id: number, appkey: string, xAccessKey: string) => {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/integracoes/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({ appkey, x_access_key: xAccessKey }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Erro ao salvar chaves.");
+    }
+
+    toast({
+      title: "Chaves salvas com sucesso!",
+      description: "As credenciais foram atualizadas.",
+    });
+
+  } catch (error: any) {
+    toast({
+      title: "Erro ao salvar",
+      description: error.message || "Falha ao atualizar as chaves.",
+      variant: "destructive",
+    });
+  }
+};
+
+const handleUpdateKeys = async (id: string, appkey: string, x_access_key: string) => {
+  const token = localStorage.getItem("token");
+
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/integracoes/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ appkey, x_access_key }),
+    });
+
+    if (!res.ok) throw new Error("Erro ao atualizar as chaves.");
+
+    toast({
+      title: "Chaves atualizadas",
+      description: "As credenciais foram atualizadas com sucesso.",
+    });
+  } catch (error: any) {
+    toast({
+      title: "Erro",
+      description: error.message || "Não foi possível atualizar as chaves.",
+      variant: "destructive",
+    });
+  }
+};
+
+const handleCreateClient = async () => {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/clientes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(newClient),
+    });
+
+    if (!res.ok) throw new Error("Erro ao criar cliente");
+
+    const data = await res.json();
+    setClients([...clients, data]);
+    toast({ title: "Cliente criado", description: "Novo cliente adicionado com sucesso." });
+
+    // 🔁 Cria convite automaticamente após o cliente
+    const conviteRes = await fetch(`${import.meta.env.VITE_API_URL}/convites`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        email: newClient.email,
+        cliente_id: data.id, // <-- ID retornado do novo cliente
+      }),
+    });
+
+    if (!conviteRes.ok) throw new Error("Cliente criado, mas erro ao gerar convite");
+
+    const conviteData = await conviteRes.json();
+    toast({
+      title: "Convite gerado",
+      description: `Token: ${conviteData.token}`,
+    });
+
+    setNewClient({ name: "", email: "", password: "", company: "", plan: "" });
+
+  } catch (err: any) {
+    toast({
+      title: "Erro",
+      description: err.message || "Erro ao criar cliente",
+      variant: "destructive",
+    });
+  }
+};
+
+
+
+
 const Admin = () => {
   const { toast } = useToast();
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
+  const [convites, setConvites] = useState<{ email: string; token: string; utilizado: boolean }[]>([]);
   const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
   const [clients, setClients] = useState<Client[]>([]);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+
+  useEffect(() => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  fetch(`${import.meta.env.VITE_API_URL}/admin/convites`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => res.json())
+    .then((data) => setConvites(data))
+    .catch((err) => console.error("Erro ao buscar convites:", err));
+}, []);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/clientes`)
@@ -188,7 +317,7 @@ const payload = {
       <Tabs defaultValue="clients" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="clients">Gestão de Clientes</TabsTrigger>
-          <TabsTrigger value="integrations">Dados de Integração</TabsTrigger>
+          <TabsTrigger value="integrations">Solicitações de Integração</TabsTrigger>
         </TabsList>
 
         <TabsContent value="clients" className="space-y-4">
@@ -230,7 +359,7 @@ const payload = {
                         </div>
                         <div className="grid gap-2">
                         <Label htmlFor="password">Senha</Label>
-                        <Input id="password" name="password" type="password" placeholder="Senha de acesso" required />
+                        <Input id="password" name="password" type="password" placeholder="Senha de acesso"/>
                       </div>
                         <div className="grid gap-2">
                           <Label htmlFor="company">Empresa</Label>
@@ -260,64 +389,72 @@ const payload = {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Empresa</TableHead>
                     <TableHead>Plano</TableHead>
+                    <TableHead>Token</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Pagamento</TableHead>
                     <TableHead>Último Pagamento</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {clients.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{client.name}</div>
-                          <div className="text-sm text-muted-foreground">{client.email}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{client.company}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{client.plan}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusBadge(client.status)}>
-                          {client.status === 'active' ? 'Ativo' : client.status === 'inactive' ? 'Inativo' : 'Pendente'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getPaymentStatusBadge(client.paymentStatus)}>
-                          {client.paymentStatus === 'up-to-date' ? 'Em dia' : 
-                           client.paymentStatus === 'overdue' ? 'Atrasado' : 'Cancelado'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{client.lastPayment}</TableCell>
-                      <TableCell>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja remover o cliente {client.name}? 
-                                Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteClient(client.id)}>
-                                Confirmar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+<TableBody>
+  {clients.map((client) => {
+    const convite = convites.find(c => c.email === client.email);
+    const token = convite?.token || "—";
+    const status = convite?.utilizado ? 'active' : 'pending';
+
+    return (
+      <TableRow key={client.id}>
+        <TableCell>
+          <div>
+            <div className="font-medium">{client.name}</div>
+            <div className="text-sm text-muted-foreground">{client.email}</div>
+          </div>
+        </TableCell>
+        <TableCell>{client.company}</TableCell>
+        <TableCell>
+          <Badge variant="outline">{client.plan}</Badge>
+        </TableCell>
+        <TableCell>{convite?.token || "—"}</TableCell>
+        <TableCell>
+          <Badge className={getStatusBadge(convite?.utilizado ? 'active' : 'pending')}>
+            {convite?.utilizado ? 'Ativo' : 'Pendente'}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Badge className={getPaymentStatusBadge(client.paymentStatus)}>
+            {client.paymentStatus === 'up-to-date' ? 'Em dia' : 
+             client.paymentStatus === 'overdue' ? 'Atrasado' : 'Cancelado'}
+          </Badge>
+        </TableCell>
+        <TableCell>{client.lastPayment || "—"}</TableCell>
+        <TableCell>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja remover o cliente {client.name}? 
+                  Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleDeleteClient(client.id)}>
+                  Confirmar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </TableCell>
+      </TableRow>
+    );
+  })}
+</TableBody>
               </Table>
             </CardContent>
           </Card>
@@ -335,13 +472,14 @@ const payload = {
               <Table>
 <TableHeader>
   <TableRow>
-    <TableHead>ID</TableHead>
+    <TableHead>ID Integração</TableHead>
     <TableHead>Cliente</TableHead>
     <TableHead>Plataforma</TableHead>
-    <TableHead>Username</TableHead>
+    <TableHead>Usuário</TableHead>
     <TableHead>Senha</TableHead>
-    <TableHead>X Access Key</TableHead>
-    <TableHead>Appkey</TableHead>
+    <TableHead>X-Access-Key</TableHead>
+    <TableHead>AppKey</TableHead>
+    <TableHead>Ações</TableHead>
     <TableHead>Status</TableHead>
     <TableHead>Última Sincronização</TableHead>
   </TableRow>
@@ -352,9 +490,9 @@ const payload = {
       <TableCell>{integration.id}</TableCell>
       <TableCell>
         <div className="font-medium">
-          {integration.cliente_id
-            ? clients.find(c => c.id === integration.cliente_id.toString())?.name || '—'
-            : '—'}
+          {integration.nome ||
+            clients.find((c) => c.id === integration.cliente_id)?.name ||
+            "—"}
         </div>
       </TableCell>
       <TableCell>
@@ -364,12 +502,12 @@ const payload = {
       <TableCell>
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm">
-            {showPasswords[integration.id] ? integration.senha : '••••••••••••'}
+            {showPasswords[integration.id] ? integration.senha : "••••••••"}
           </span>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => togglePasswordVisibility(integration.id)}
+            onClick={() => togglePasswordVisibility(String(integration.id))}
           >
             {showPasswords[integration.id] ? (
               <EyeOff className="w-4 h-4" />
@@ -379,21 +517,67 @@ const payload = {
           </Button>
         </div>
       </TableCell>
-      <TableCell>{integration.x_access_key || '—'}</TableCell>
-      <TableCell>{integration.appkey || '—'}</TableCell>
+      <TableCell>
+        <Input
+          value={integration.x_access_key || ""}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setIntegrations((prev) =>
+              prev.map((i) =>
+                i.id === integration.id
+                  ? { ...i, x_access_key: newValue }
+                  : i
+              )
+            );
+          }}
+          placeholder="x-access-key"
+          className="w-40"
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          value={integration.appkey || ""}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setIntegrations((prev) =>
+              prev.map((i) =>
+                i.id === integration.id ? { ...i, appkey: newValue } : i
+              )
+            );
+          }}
+          placeholder="appkey"
+          className="w-40"
+        />
+      </TableCell>
+      <TableCell>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            handleUpdateKeys(
+              integration.id.toString(),
+              integration.appkey || "",
+              integration.x_access_key || ""
+            )
+          }
+        >
+          Salvar
+        </Button>
+      </TableCell>
       <TableCell>
         <Badge className={getStatusBadge(integration.status)}>
-          {integration.status === 'active' ? 'Ativo' : 'Inativo'}
+          {integration.status === "active" ? "Ativo" : "Inativo"}
         </Badge>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {integration.ultima_sincronizacao
           ? new Date(integration.ultima_sincronizacao).toLocaleString("pt-BR")
-          : '—'}
+          : "—"}
       </TableCell>
     </TableRow>
   ))}
 </TableBody>
+
               </Table>
             </CardContent>
           </Card>
