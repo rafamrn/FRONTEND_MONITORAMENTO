@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUsinas } from "@/services/usinaService";
 import PlantsStatusSummary from "@/components/PlantsStatusSummary";
 import { Loader2 } from "lucide-react";
+import { fetchWithToken } from "@/services/usinaService";
 
 
 
@@ -180,19 +181,19 @@ useEffect(() => {
     try {
       const [usinas, diaria, semanal, mensal] = await Promise.all([
         getUsinas(),
-        fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria").then(res => res.json()),
-        fetch("https://backendmonitoramento-production.up.railway.app/performance_7dias").then(res => res.json()),
-        fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias").then(res => res.json())
+        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_diaria`),
+        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_7dias`),
+        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_30dias`)
       ]);
 
-      setPlants(usinas);
-
-      const mapear = (lista) => {
-        const mapa = {};
+      const mapear = (lista: any[]) => {
+        if (!Array.isArray(lista)) throw new Error("Resposta inválida");
+        const mapa: { [key: number]: number } = {};
         lista.forEach(item => mapa[item.plant_id] = item.performance_percentual);
         return mapa;
       };
 
+      setPlants(usinas);
       setPerformances(mapear(diaria));
       setPerformances7d(mapear(semanal));
       setPerformances30d(mapear(mensal));
@@ -206,77 +207,6 @@ useEffect(() => {
 
   carregarTodosOsDados();
 }, [toast]);
-
-  // Atualiza performance mensal a cada 2 minutos
-
-  useEffect(() => {
-    const carregarPerformance30d = async () => {
-      try {
-        const res = await fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias");
-        const data = await res.json();
-        const perfMap: { [plantId: number]: number } = {};
-        data.forEach((item: any) => {
-          perfMap[item.plant_id] = item.performance_percentual;
-        });
-        setPerformances30d(perfMap);
-      } catch (error) {
-        console.error("Erro ao buscar performance de 30 dias:", error);
-      }
-    };
-  
-    carregarPerformance30d();
-    const interval = setInterval(() => carregarPerformance30d(), 120000); // 2 minutos
-  
-    return () => clearInterval(interval);
-  }, []);
-
-
-  // Atualiza performance semanal a cada 2 minutos
-
-  useEffect(() => {
-    const carregarPerformance7d = async () => {
-      try {
-        const res = await fetch("https://backendmonitoramento-production.up.railway.app/performance_7dias");
-        const data = await res.json();
-        const perfMap: { [plantId: number]: number } = {};
-        data.forEach((item: any) => {
-          perfMap[item.plant_id] = item.performance_percentual;
-        });
-        setPerformances7d(perfMap);
-      } catch (error) {
-        console.error("Erro ao buscar performance de 7 dias:", error);
-      }
-    };
-  
-    carregarPerformance7d();
-    const interval = setInterval(() => carregarPerformance7d(), 120000); // 2 minutos
-  
-    return () => clearInterval(interval);
-  }, []);
-
-
-  // Atualiza performance diário a cada 2 minutos
-  useEffect(() => {
-    const carregarPerformance = async () => {
-      try {
-        const res = await fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria");
-        const data = await res.json();
-        const perfMap: { [plantId: number]: number } = {};
-        data.forEach((item: any) => {
-          perfMap[item.plant_id] = item.performance_percentual;
-        });
-        setPerformances(perfMap);
-        console.log("📊 Performance diária carregada:", perfMap);
-      } catch (error) {
-        console.error("Erro ao buscar performance diária:", error);
-      }
-    };
-
-    carregarPerformance();
-    const interval = setInterval(() => carregarPerformance(), 120000); // 2 minutos
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Atualiza usinas a cada 2 minutos
   useEffect(() => {

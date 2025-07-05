@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Factory, Plus } from "lucide-react";
 import { getUsinas } from "@/services/usinaService";
-
+import { useToast } from "@/hooks/use-toast";
 const months = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -27,6 +27,8 @@ const Usinas = () => {
   const [selectedPlant, setSelectedPlant] = useState<number | null>(null);
   const [monthlyGeneration, setMonthlyGeneration] = useState<{ [key: string]: number }>({});
   const [dadosProjecao, setDadosProjecao] = useState<{ [plantId: number]: any[] }>({});
+  const { toast } = useToast();
+  const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -57,7 +59,15 @@ const Usinas = () => {
     async function carregarProjecoesTodas() {
       for (const plant of powerPlants) {
         try {
-          const res = await fetch(`backendmonitoramento-production.up.railway.app/projecoes/${plant.ps_id}?year=2025`);
+          const token = localStorage.getItem("token");
+          const res = await fetch(
+  `https://backendmonitoramento-production.up.railway.app/projecoes/${plant.ps_id}?year=2025`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`, // ADICIONAR
+    },
+  }
+);
           const data = await res.json();
           setDadosProjecao(prev => ({ ...prev, [plant.ps_id]: data }));
         } catch (error) {
@@ -80,7 +90,15 @@ const Usinas = () => {
 
   const carregarProjecoesSalvas = async (plantId: number) => {
   try {
-    const res = await fetch(`https://backendmonitoramento-production.up.railway.app/projecoes/${plantId}?year=2025`);
+    const token = localStorage.getItem("token");
+    const res = await fetch(
+  `https://backendmonitoramento-production.up.railway.app/projecoes/${plantId}?year=2025`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`, // ADICIONAR
+    },
+  }
+);
     const data = await res.json();
 
     const numeroParaMes: { [key: number]: string } = {
@@ -126,14 +144,16 @@ const Usinas = () => {
     };
 
     try {
+      const token = localStorage.getItem("token");
+
       const res = await fetch("https://backendmonitoramento-production.up.railway.app/projecoes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // ADICIONAR
+        },
+        body: JSON.stringify(payload),
       });
-
-      const data = await res.json();
-      alert("Projeções salvas com sucesso!");
 
 // Atualiza dadosProjecao com os novos valores
 setDadosProjecao(prev => ({
@@ -158,6 +178,10 @@ projections.forEach(({ month, kwh }) => {
 });
 
 setMonthlyGeneration(novosDados);
+toast({
+  title: "Projeção salva",
+  description: "A geração mensal foi atualizada com sucesso.",
+});
     } catch (error) {
       console.error("Erro ao salvar projeções:", error);
       alert("Erro ao salvar projeções.");
@@ -197,56 +221,69 @@ setMonthlyGeneration(novosDados);
             </CardContent>
 
             <CardFooter>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={async () => {
-  setSelectedPlant(plant.ps_id);
-  await carregarProjecoesSalvas(plant.ps_id); // preenche o formulário ANTES de abrir
-}}
-                  >
-                    <Plus size={16} className="mr-2" />
-                    Projeção Mensal
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>Projeção Mensal - {plant.ps_name}</DialogTitle>
-                    <DialogDescription>
-                      Insira a geração projetada (kWh) para cada mês do ano.
-                    </DialogDescription>
-                  </DialogHeader>
+<Dialog open={openDialog} onOpenChange={setOpenDialog}>
+  <DialogTrigger asChild>
+    <Button
+      variant="outline"
+      className="w-full"
+      onClick={async () => {
+        setSelectedPlant(plant.ps_id);
+        await carregarProjecoesSalvas(plant.ps_id);
+        setOpenDialog(true); // ← ABRE o modal
+      }}
+    >
+      <Plus size={16} className="mr-2" />
+      Projeção Mensal
+    </Button>
+  </DialogTrigger>
 
-                  <div className="grid grid-cols-2 gap-4 py-4">
-                    {months.map((month) => (
-                      <div key={month} className="flex flex-col space-y-1">
-                        <Label htmlFor={`${month}-input`}>{month}</Label>
-                        <Input
-                          id={`${month}-input`}
-                          type="number"
-                          placeholder="kWh"
-                          value={monthlyGeneration[month] || ""}
-                          onChange={(e) => handleGenerationChange(month, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                  </div>
+  <DialogContent className="sm:max-w-[500px]">
+    <DialogHeader>
+      <DialogTitle>Projeção Mensal - {plant.ps_name}</DialogTitle>
+      <DialogDescription>
+        Insira a geração projetada (kWh) para cada mês do ano.
+      </DialogDescription>
+    </DialogHeader>
 
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setSelectedPlant(null)}>
-                      Cancelar
-                    </Button>
-                    <Button
-                      onClick={handleSaveGeneration}
-                      className="bg-solar-orange hover:bg-solar-orange/90"
-                    >
-                      Salvar Projeção
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+    <div className="grid grid-cols-2 gap-4 py-4">
+      {months.map((month) => (
+        <div key={month} className="flex flex-col space-y-1">
+          <Label htmlFor={`${month}-input`}>{month}</Label>
+          <Input
+            id={`${month}-input`}
+            type="number"
+            placeholder="kWh"
+            value={monthlyGeneration[month] || ""}
+            onChange={(e) => handleGenerationChange(month, e.target.value)}
+          />
+        </div>
+      ))}
+    </div>
+
+    <DialogFooter>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setSelectedPlant(null);
+          setOpenDialog(false); // ← FECHA ao cancelar
+        }}
+      >
+        Cancelar
+      </Button>
+
+      <Button
+        onClick={async () => {
+          await handleSaveGeneration(); // ← salva e atualiza localmente
+          setOpenDialog(false); // ← FECHA após salvar
+        }}
+        className="bg-solar-orange hover:bg-solar-orange/90"
+      >
+        Salvar Projeção
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
             </CardFooter>
           </Card>
         ))}

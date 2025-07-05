@@ -248,8 +248,10 @@ useEffect(() => {
 const payload = {
   name: formData.get('name'),
   email: formData.get('email'),
-  password: formData.get('password'), // ✅ ADICIONAR ISSO
+  password: formData.get('password'),
   company: formData.get('company'),
+  cnpj: formData.get('cnpj'),
+  telefone: formData.get('telefone'),
   plan: formData.get('plan'),
   status: 'active',
   payment_status: 'up-to-date',
@@ -349,22 +351,19 @@ const payload = {
                     </DialogHeader>
                     <form onSubmit={handleCreateClient}>
                       <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="name">Nome</Label>
-                          <Input id="name" name="name" placeholder="Nome completo" required />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="email">Email</Label>
-                          <Input id="email" name="email" type="email" placeholder="email@exemplo.com" required />
-                        </div>
-                        <div className="grid gap-2">
-                        <Label htmlFor="password">Senha</Label>
-                        <Input id="password" name="password" type="password" placeholder="Senha de acesso"/>
-                      </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="cnpj">CNPJ</Label>
+                      <Input id="cnpj" name="cnpj" placeholder="00.000.000/0000-00" required />
+                    </div>
+
                         <div className="grid gap-2">
                           <Label htmlFor="company">Empresa</Label>
                           <Input id="company" name="company" placeholder="Nome da empresa" required />
                         </div>
+                        <div className="grid gap-2">
+                        <Label htmlFor="password">Telefone</Label>
+                        <Input id="password" name="password" placeholder="(00) 00000-0000"/>
+                      </div>
                         <div className="grid gap-2">
                           <Label htmlFor="plan">Plano</Label>
                           <select id="plan" name="plan" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" required>
