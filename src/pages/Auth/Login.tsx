@@ -30,13 +30,14 @@ const Login = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+const form = useForm<LoginFormValues>({
+  resolver: zodResolver(loginSchema),
+  mode: "onChange", // <- garante que a validação seja reativa
+  defaultValues: {
+    email: "",
+    password: "",
+  },
+});
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
@@ -130,13 +131,17 @@ const Login = () => {
                   Esqueceu a senha?
                 </Link>
               </div>
-              <Button 
-              type="submit" 
-              className="w-full bg-solar-blue hover:bg-solar-blue/90 hover:shadow-[0_0_12px_rgba(0,123,255,0.8)] transition-all duration-300"
-              disabled={isLoading}
-            >
-              {isLoading ? "Entrando..." : "Entrar"}
-            </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || !form.formState.isValid}
+                className={`w-full transition-all duration-300 ${
+                  form.formState.isValid
+                    ? "bg-solar-orange hover:bg-solar-orange/90 hover:shadow-[0_0_12px_rgba(255,123,0,0.8)]"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
+              >
+                {isLoading ? "Entrando..." : "Entrar"}
+              </Button>
             </form>
           </Form>
         </CardContent>

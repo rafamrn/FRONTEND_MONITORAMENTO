@@ -35,7 +35,11 @@ const UsinaDetalhe = () => {
           let updatedPlant = { ...found };
   
           // Performance dos últimos 30 dias
-          const res30d = await fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias");
+          const res30d = await fetch("https://backendmonitoramento-production.up.railway.app/performance_30dias", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
           const data30d = await res30d.json();
           const perf30d = data30d.find((item: any) => String(item.plant_id) === String(found.ps_id));
           if (perf30d) {
@@ -43,7 +47,11 @@ const UsinaDetalhe = () => {
           }
   
           // ✅ Performance diária (todas as usinas, filtra a correta)
-          const resDia = await fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria");
+          const resDia = await fetch("https://backendmonitoramento-production.up.railway.app/performance_diaria", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
           const dataDia = await resDia.json();
           const perfDia = dataDia.find((item: any) => String(item.plant_id) === String(found.ps_id));
           if (perfDia) {
