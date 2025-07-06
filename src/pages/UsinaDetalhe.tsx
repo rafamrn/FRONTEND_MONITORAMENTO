@@ -12,7 +12,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-
+import EnergyFlowDiagram from "@/components/EnergyFlowDiagram";
+import UsinaAlarmsCard from '@/components/UsinaAlarmCards';
 
 
 const UsinaDetalhe = () => {
@@ -24,6 +25,28 @@ const UsinaDetalhe = () => {
   const [totalGerado, setTotalGerado] = useState<number | null>(null);
   const [dadosTecnicos, setDadosTecnicos] = useState<any[]>([]);
   const token = localStorage.getItem("token");
+  const mpptMap = [
+  { id: 1, voltageKey: "p5", currentKey: "p6" },
+  { id: 2, voltageKey: "p7", currentKey: "p8" },
+  { id: 3, voltageKey: "p9", currentKey: "p10" },
+  { id: 4, voltageKey: "p45", currentKey: "p46" },
+  { id: 5, voltageKey: "p47", currentKey: "p48" },
+  { id: 6, voltageKey: "p49", currentKey: "p50" },
+  { id: 7, voltageKey: "p51", currentKey: "p52" },
+  { id: 8, voltageKey: "p53", currentKey: "p54" },
+  { id: 9, voltageKey: "p55", currentKey: "p56" },
+  { id: 10, voltageKey: "p57", currentKey: "p58" },
+  { id: 11, voltageKey: "p7401", currentKey: "p7451" },
+  { id: 12, voltageKey: "p7402", currentKey: "p7452" },
+  { id: 13, voltageKey: "p7723", currentKey: "p7724" },
+  { id: 14, voltageKey: "p7725", currentKey: "p7726" },
+  { id: 15, voltageKey: "p7727", currentKey: "p7728" },
+  { id: 16, voltageKey: "p7729", currentKey: "p7730" },
+  { id: 17, voltageKey: "p7731", currentKey: "p7732" },
+  { id: 18, voltageKey: "p7733", currentKey: "p7734" },
+  { id: 19, voltageKey: "p7735", currentKey: "p7736" },
+  { id: 20, voltageKey: "p7737", currentKey: "p7738" },
+];
 
   // ✅ Busca e atualiza a planta + performance30d
   useEffect(() => {
@@ -87,16 +110,25 @@ const UsinaDetalhe = () => {
         const res = await getDadosTecnicos(Number(id), token);
         setDadosTecnicos(res.dados);
     
-        if (res.dados && res.dados.length > 0) {
-          const temperatura = res.dados[0].temperatura_interna;
-          setPlant((prevPlant: any) => ({
-            ...prevPlant,
-            temperatura_interna: temperatura
-          }));
-        }
+if (res.dados && res.dados.length > 0) {
+  const temperatura = res.dados[0].temperatura_interna;
+
+  // 💡 Soma total da potência ativa de todos os inversores
+  const potenciaTotal = res.dados.reduce((soma: number, inv: any) => {
+    return soma + (parseFloat(inv.active_power) || 0);
+  }, 0);
+
+  setPlant((prevPlant: any) => ({
+    ...prevPlant,
+    temperatura_interna: temperatura,
+    curr_power: potenciaTotal, // <-- Isso alimenta o PowerGauge
+  }));
+}
+
       } catch (err) {
         console.error("Erro ao buscar dados técnicos:", err);
       }
+      
     }
   
     if (id && token) {
@@ -188,9 +220,6 @@ const UsinaDetalhe = () => {
 
   const tensoesStrings = dadosTecnicos.filter((d: any) => d.nome?.startsWith("tensao_string_"));
   const correntesStrings = dadosTecnicos.filter((d: any) => d.nome?.startsWith("corrente_string_"));
-
-  
-
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -373,137 +402,100 @@ const UsinaDetalhe = () => {
 
         {/*LISTA DE ALARMES */}
         
-        <Card className="hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="flex flex-row items-center space-x-2">
-            <CircleAlert className="h-5 w-5 text-solar-orange" />
-            <CardTitle>Alarmes Recentes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-           
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CircleAlert className="h-5 w-5 text-solar-blue" />
-                <p className="text-sm text-muted-foreground">Alarme 1</p>
-              </div>
-              <p className={`font-medium ${plant.temperature > 35 ? 'text-red-500' : plant.temperature > 30 ? 'text-yellow-500' : 'text-green-500'}`}>
-                {plant.temperature > 0 ? `${plant.temperature}°C` : 'N/A'}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CircleAlert className="h-5 w-5 text-solar-blue" />
-                <p className="text-sm text-muted-foreground">Alarme 2</p>
-              </div>
-              <p className={`font-medium ${plant.temperature > 35 ? 'text-red-500' : plant.temperature > 30 ? 'text-yellow-500' : 'text-green-500'}`}>
-                {plant.temperature > 0 ? `${plant.temperature}°C` : 'N/A'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Alarmes e Histórico de Falhas */}
+      <UsinaAlarmsCard 
+        usinaId={plant.id}
+        usinaName={plant.name}
+      />
         </div>
-                  {/* INFORMAÇÕES TÉCNICAS DO SISTEMA */}
-                  <Card className="hover:shadow-lg transition-shadow duration-300">
-        <CardHeader className="flex flex-row items-center space-x-2">
-          <Gauge className="h-5 w-5 text-solar-orange" />
-          <CardTitle>Informações Técnicas do Sistema</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-        {dadosTecnicos.map((inversor, idx) => {
-        const tensoes = Object.entries(inversor).filter(([k]) => k.startsWith("tensao_string_"));
-        const correntes = Object.entries(inversor).filter(([k]) => k.startsWith("corrente_string_"));
-        const tensoesMPPT = Object.entries(inversor).filter(([k]) => k.startsWith("tensao_mppt_"));
-        const correntesMPPT = Object.entries(inversor).filter(([k]) => k.startsWith("corrente_mppt_"));
+      {/* INFORMAÇÕES TÉCNICAS DO SISTEMA */}
+<Card className="hover:shadow-lg transition-shadow duration-300">
+  <CardHeader className="flex flex-row items-center space-x-2">
+    <Gauge className="h-5 w-5 text-solar-orange" />
+    <CardTitle>Fluxo de Energia</CardTitle>
+  </CardHeader>
+<CardContent>
+<EnergyFlowDiagram
+  inverters={dadosTecnicos.map((inversor: any, index: number) => {
+    const tensaoStrings = Object.entries(inversor)
+      .filter(([k]) => k.startsWith("tensao_string_"))
+      .map(([_, v]) => Number(v));
 
-            
-            return (
-              <div key={idx} className="space-y-4 border-t pt-4 mt-4">
-                <div className="flex items-center gap-2">
-                  <CircuitBoard className="h-5 w-5 text-solar-orange" />
-                  <p className="text-base font-semibold white">
-                  {inversor.nome_inversor?.toLowerCase().startsWith("inverter")
-                    ? `Inversor ${idx + 1}`
-                    : inversor.nome_inversor || `Inversor ${idx + 1}`}
-                </p>
-                </div>
+    const hasValidStringData = tensaoStrings.some((v) => v > 50);
 
+    const strings = hasValidStringData
+      ? Object.entries(inversor)
+          .filter(([k]) => k.startsWith("tensao_string_"))
+          .map(([k, v], idx) => {
+            const corrente = inversor[`corrente_string_${idx + 1}`] || 0;
+            return {
+              id: idx + 1,
+              voltage: Number(v),
+              current: Number(corrente),
+              isOperating: Number(v) > 100,
+            };
+          })
+      : [];
 
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <Thermometer className="h-5 w-5 text-solar-orange" />
-                      <p className="text-sm text-muted-foreground">Temperatura de Ar Interna</p>
-                    </div>
-                    <p className={`font-medium ${
-                      inversor.temperatura_interna > 65
-                        ? 'text-red-500'
-                        : inversor.temperatura_interna > 30
-                        ? 'text-yellow-500'
-                        : 'text-green-500'
-                    }`}>
-                      {inversor.temperatura_interna > 0
-                        ? `${inversor.temperatura_interna}°C`
-                        : 'N/A'}
-                    </p>
-                  </div>
+    const mppts = Object.entries(inversor)
+      .filter(([k]) => k.startsWith("tensao_mppt_"))
+      .map(([k, v]) => {
+        const id = Number(k.split("tensao_mppt_")[1]);
+        const corrente = Number(inversor[`corrente_mppt_${id}`]) || 0;
+        return {
+          id,
+          voltage: Number(v),
+          current: corrente,
+        };
+      });
 
+    return {
+      id: index + 1,
+      name: inversor.nome_inversor || `Inversor ${index + 1}`,
+      temperature: Number(inversor.temperatura_interna),
+      efficiency: 98,
+      curr_power: Number(inversor.active_power) || 0,
+      strings,
+      mppts,
+      tensao_fase_a: Number(inversor.tensao_fase_a),
+      tensao_fase_b: Number(inversor.tensao_fase_b),
+      tensao_fase_c: Number(inversor.tensao_fase_c),
+      corrente_fase_a: Number(inversor.corrente_fase_a),
+      corrente_fase_b: Number(inversor.corrente_fase_b),
+      corrente_fase_c: Number(inversor.corrente_fase_c),
+      frequencia_rede: Number(inversor.frequencia_rede),
+    };
+  })}
+  acOutput={[
+    dadosTecnicos[0]?.tensao_fase_a && Number(dadosTecnicos[0].tensao_fase_a) > 0
+      ? {
+          phase: "Fase A",
+          voltage: Number(dadosTecnicos[0].tensao_fase_a),
+          current: Number(dadosTecnicos[0]?.corrente_fase_a) || 0,
+        }
+      : null,
+    dadosTecnicos[0]?.tensao_fase_b && Number(dadosTecnicos[0].tensao_fase_b) > 0
+      ? {
+          phase: "Fase B",
+          voltage: Number(dadosTecnicos[0].tensao_fase_b),
+          current: Number(dadosTecnicos[0]?.corrente_fase_b) || 0,
+        }
+      : null,
+    dadosTecnicos[0]?.tensao_fase_c && Number(dadosTecnicos[0].tensao_fase_c) > 0
+      ? {
+          phase: "Fase C",
+          voltage: Number(dadosTecnicos[0].tensao_fase_c),
+          current: Number(dadosTecnicos[0]?.corrente_fase_c) || 0,
+        }
+      : null,
+  ].filter(Boolean)}
+  frequency={Number(dadosTecnicos[0]?.frequencia_rede) || undefined}
+/>
 
+</CardContent>
 
-                <div className="space-y-1">
-
-                  {tensoes.map(([nome, valor]) => (
-                    <div key={nome} className="flex justify-between items-center">
-                      <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, ' ')}</p>
-                      <p className="font-medium">{valor} V</p>
-                    </div>
-                  ))}
-                </div>
-
-                
-                <div className="space-y-1 mt-2">
-                  {correntes.map(([nome, valor]) => (
-                    <div key={nome} className="flex justify-between items-center">
-                      <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, ' ')}</p>
-                      <p className="font-medium">{valor} A</p>
-                    </div>
-                  ))}
-                </div>
-              {/* Tensões por MPPT */}
-              <div className="space-y-1 mt-4">
-                <div className="flex items-center gap-2">
-                  <Gauge className="h-5 w-5 text-solar-orange" />
-                  <p className="text-base font-semibold white">Tensões por MPPT</p>
-                </div>
-                {tensoesMPPT.map(([nome, valor]) => (
-                  <div key={nome} className="flex justify-between items-center">
-                    <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, " ")}</p>
-                    <p className="font-medium">{valor} V</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Correntes por MPPT */}
-              <div className="space-y-1 mt-2">
-                <div className="flex items-center gap-2">
-                  <Gauge className="h-5 w-5 text-solar-orange" />
-                  <p className="text-base font-semibold white">Correntes por MPPT</p>
-                </div>
-                {correntesMPPT.map(([nome, valor]) => (
-                  <div key={nome} className="flex justify-between items-center">
-                    <p className="text-sm text-muted-foreground capitalize">{nome.replace(/_/g, " ")}</p>
-                    <p className="font-medium">{valor} A</p>
-                  </div>
-                ))}
-              </div>
-
-
-
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      </div>
+</Card>
+    </div>
   );
 };
 
