@@ -77,8 +77,8 @@ const EnergyProductionChart: React.FC<EnergyProductionChartProps> = ({
 
 console.log("🟢 Valores de p24 (produção por horário):", responseData.diario);
 
-        } else if (periodType === 'month' && Array.isArray(responseData.mensal)) {
-          setData(responseData.mensal.map((item: any) => ({
+        } else if (periodType === 'month' && Array.isArray(responseData["30dias"])) {
+          setData(responseData["30dias"].map((item: any) => ({
             time: item.date,
             production: item.production
           })));
@@ -87,16 +87,18 @@ console.log("🟢 Valores de p24 (produção por horário):", responseData.diari
             onTotalChange(responseData.total); // ✅ envia total mensal
           }
 
-        } else if (periodType === 'year' && Array.isArray(responseData.anual)) {
-          console.log("Dados ano:", responseData.anual);
-          setData(responseData.anual.map((item: any) => ({
+        } else if (periodType === 'year' && Array.isArray(responseData["12meses"] || responseData.anual)) {
+          const meses = responseData["12meses"] || responseData.anual;
+          setData(meses.map((item: any) => ({
             time: item.date,
             production: item.production
           })));
           setTotalP1(responseData.total);
           if (onTotalChange) {
-            onTotalChange(responseData.total); // ✅ envia total anual
+            onTotalChange(responseData.total);
           }
+
+
 
         } else {
           console.warn("Formato de dados inesperado:", responseData);

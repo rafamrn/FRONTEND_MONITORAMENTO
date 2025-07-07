@@ -23,6 +23,13 @@ const UsinaDetalhe = () => {
   const [periodType, setPeriodType] = useState<'day' | 'month' | 'year'>('day');
   const [date, setDate] = useState<Date>(new Date());
   const [totalGerado, setTotalGerado] = useState<number | null>(null);
+  const [loadingChart, setLoadingChart] = useState(true);
+  useEffect(() => {
+  if (plant?.ps_id) {
+    setLoadingChart(true);
+  }
+}, [periodType, date]);
+
   const [dadosTecnicos, setDadosTecnicos] = useState<any[]>([]);
   const token = localStorage.getItem("token");
   const mpptMap = [
@@ -335,18 +342,30 @@ if (res.dados && res.dados.length > 0) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-  <div className="h-[300px]">
-    {plant?.ps_id && (
-      <EnergyProductionChart
-        periodType={periodType}
-        selectedDate={date}
-        plantId={plant.ps_id}
-        onTotalChange={(valor) => setTotalGerado(valor)}
-      />
-    )}
+<CardContent className="relative h-[300px]">
+{loadingChart && (
+  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-10">
+    <svg className="animate-spin h-6 w-6 text-solar-orange mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
+    <p className="text-sm text-muted-foreground">Carregando geração da usina...</p>
   </div>
+)}
+
+  {plant?.ps_id && (
+    <EnergyProductionChart
+      periodType={periodType}
+      selectedDate={date}
+      plantId={plant.ps_id}
+      onTotalChange={(valor) => {
+        setTotalGerado(valor);
+        setLoadingChart(false); // ⬅️ encerra o loading quando os dados chegam
+      }}
+    />
+  )}
 </CardContent>
+
           </Card>
         </div>
 
@@ -404,8 +423,8 @@ if (res.dados && res.dados.length > 0) {
         
       {/* Alarmes e Histórico de Falhas */}
       <UsinaAlarmsCard 
-        usinaId={plant.id}
-        usinaName={plant.name}
+        usinaId={plant.ps_id}        // ⬅ usa o ID correto da planta
+        usinaName={plant.ps_name}    // ⬅ usa o nome correto
       />
         </div>
       {/* INFORMAÇÕES TÉCNICAS DO SISTEMA */}
@@ -449,6 +468,31 @@ if (res.dados && res.dados.length > 0) {
         };
       });
 
+    // 🔧 acOutput individual para cada inversor
+    const acOutput = [
+      inversor.tensao_fase_a && Number(inversor.tensao_fase_a) > 0
+        ? {
+            phase: "Fase A",
+            voltage: Number(inversor.tensao_fase_a),
+            current: Number(inversor.corrente_fase_a) || 0,
+          }
+        : null,
+      inversor.tensao_fase_b && Number(inversor.tensao_fase_b) > 0
+        ? {
+            phase: "Fase B",
+            voltage: Number(inversor.tensao_fase_b),
+            current: Number(inversor.corrente_fase_b) || 0,
+          }
+        : null,
+      inversor.tensao_fase_c && Number(inversor.tensao_fase_c) > 0
+        ? {
+            phase: "Fase C",
+            voltage: Number(inversor.tensao_fase_c),
+            current: Number(inversor.corrente_fase_c) || 0,
+          }
+        : null,
+    ].filter(Boolean);
+
     return {
       id: index + 1,
       name: inversor.nome_inversor || `Inversor ${index + 1}`,
@@ -457,40 +501,12 @@ if (res.dados && res.dados.length > 0) {
       curr_power: Number(inversor.active_power) || 0,
       strings,
       mppts,
-      tensao_fase_a: Number(inversor.tensao_fase_a),
-      tensao_fase_b: Number(inversor.tensao_fase_b),
-      tensao_fase_c: Number(inversor.tensao_fase_c),
-      corrente_fase_a: Number(inversor.corrente_fase_a),
-      corrente_fase_b: Number(inversor.corrente_fase_b),
-      corrente_fase_c: Number(inversor.corrente_fase_c),
-      frequencia_rede: Number(inversor.frequencia_rede),
+      acOutput,
+      frequency: Number(inversor.frequencia_rede),
     };
   })}
-  acOutput={[
-    dadosTecnicos[0]?.tensao_fase_a && Number(dadosTecnicos[0].tensao_fase_a) > 0
-      ? {
-          phase: "Fase A",
-          voltage: Number(dadosTecnicos[0].tensao_fase_a),
-          current: Number(dadosTecnicos[0]?.corrente_fase_a) || 0,
-        }
-      : null,
-    dadosTecnicos[0]?.tensao_fase_b && Number(dadosTecnicos[0].tensao_fase_b) > 0
-      ? {
-          phase: "Fase B",
-          voltage: Number(dadosTecnicos[0].tensao_fase_b),
-          current: Number(dadosTecnicos[0]?.corrente_fase_b) || 0,
-        }
-      : null,
-    dadosTecnicos[0]?.tensao_fase_c && Number(dadosTecnicos[0].tensao_fase_c) > 0
-      ? {
-          phase: "Fase C",
-          voltage: Number(dadosTecnicos[0].tensao_fase_c),
-          current: Number(dadosTecnicos[0]?.corrente_fase_c) || 0,
-        }
-      : null,
-  ].filter(Boolean)}
-  frequency={Number(dadosTecnicos[0]?.frequencia_rede) || undefined}
 />
+
 
 </CardContent>
 
