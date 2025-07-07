@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
+import { CheckCircle } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,48 +29,59 @@ const Usinas = () => {
   const [monthlyGeneration, setMonthlyGeneration] = useState<{ [key: string]: number }>({});
   const [dadosProjecao, setDadosProjecao] = useState<{ [plantId: number]: any[] }>({});
   const { toast } = useToast();
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openDialogPlantId, setOpenDialogPlantId] = useState<number | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-  
-    if (!token) {
-      window.location.href = "/login";
-      return;
-    }
-  
-    fetch("https://backendmonitoramento-production.up.railway.app/usina", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    window.location.href = "/login";
+    return;
+  }
+
+  fetch("https://backendmonitoramento-production.up.railway.app/usina", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Token inválido ou expirado");
+      return res.json();
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Token inválido ou expirado");
-        return res.json();
-      })
-      .then(setPowerPlants)
-      .catch((err) => {
-        console.error("Erro ao carregar usinas:", err);
+    .then(setPowerPlants)
+    .catch((err) => {
+      console.error("Erro ao carregar usinas:", err);
+      if (err.message.includes("Token")) {
         localStorage.removeItem("token");
         window.location.href = "/login";
-      });
-  }, []);
+      } else {
+        toast({
+          title: "Erro ao carregar usinas",
+          description: "Verifique sua conexão ou tente novamente mais tarde.",
+          variant: "destructive",
+        });
+      }
+    });
+}, []); // <-- FALTAVA ISSO!
+
 
   useEffect(() => {
     async function carregarProjecoesTodas() {
       for (const plant of powerPlants) {
         try {
           const token = localStorage.getItem("token");
-          const res = await fetch(
-  `https://backendmonitoramento-production.up.railway.app/projecoes/${plant.ps_id}?year=2025`,
-  {
-    headers: {
-      Authorization: `Bearer ${token}`, // ADICIONAR
-    },
-  }
-);
-          const data = await res.json();
-          setDadosProjecao(prev => ({ ...prev, [plant.ps_id]: data }));
+const res = await fetch(`https://backendmonitoramento-production.up.railway.app/projecoes/${plant.ps_id}?year=2025`, {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
+if (!res.ok) {
+  console.warn(`Sem projeções cadastradas para a usina ${plant.ps_name} (id: ${plant.ps_id})`);
+  continue; // <-- pular para a próxima usina
+}
+const data = await res.json();
+setDadosProjecao(prev => ({ ...prev, [plant.ps_id]: data }));
+
         } catch (error) {
           console.error("Erro ao carregar projeções:", error);
         }
@@ -221,21 +233,45 @@ toast({
             </CardContent>
 
             <CardFooter>
-<Dialog open={openDialog} onOpenChange={setOpenDialog}>
-  <DialogTrigger asChild>
-    <Button
-      variant="outline"
-      className="w-full"
-      onClick={async () => {
-        setSelectedPlant(plant.ps_id);
-        await carregarProjecoesSalvas(plant.ps_id);
-        setOpenDialog(true); // ← ABRE o modal
-      }}
-    >
-      <Plus size={16} className="mr-2" />
-      Projeção Mensal
-    </Button>
-  </DialogTrigger>
+
+<Dialog
+  open={openDialogPlantId === plant.ps_id}
+  onOpenChange={(isOpen) => {
+    if (!isOpen) {
+      setOpenDialogPlantId(null);
+      setSelectedPlant(null);
+    }
+  }}
+>
+<DialogTrigger asChild>
+  <Button
+    variant={dadosProjecao[plant.ps_id]?.length > 0 ? "outline" : "outline"}
+    className={`w-full flex items-center justify-center gap-2 ${
+      dadosProjecao[plant.ps_id]?.length > 0
+        ? "border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900"
+        : ""
+    }`}
+    onClick={async () => {
+      setSelectedPlant(plant.ps_id);
+      await carregarProjecoesSalvas(plant.ps_id);
+      setOpenDialogPlantId(plant.ps_id);
+    }}
+  >
+    {dadosProjecao[plant.ps_id]?.length > 0 ? (
+      <>
+        <CheckCircle className="w-4 h-4" />
+        Editar Projeção
+      </>
+    ) : (
+      <>
+        <Plus size={16} />
+        Projeção Mensal
+      </>
+    )}
+  </Button>
+</DialogTrigger>
+
+
 
   <DialogContent className="sm:max-w-[500px]">
     <DialogHeader>
@@ -264,8 +300,8 @@ toast({
       <Button
         variant="outline"
         onClick={() => {
+          setOpenDialogPlantId(null);
           setSelectedPlant(null);
-          setOpenDialog(false); // ← FECHA ao cancelar
         }}
       >
         Cancelar
@@ -273,8 +309,8 @@ toast({
 
       <Button
         onClick={async () => {
-          await handleSaveGeneration(); // ← salva e atualiza localmente
-          setOpenDialog(false); // ← FECHA após salvar
+          await handleSaveGeneration();
+          setOpenDialogPlantId(null); // FECHA o modal após salvar
         }}
         className="bg-solar-orange hover:bg-solar-orange/90"
       >
@@ -283,6 +319,7 @@ toast({
     </DialogFooter>
   </DialogContent>
 </Dialog>
+
 
             </CardFooter>
           </Card>
