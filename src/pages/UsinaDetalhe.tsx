@@ -152,7 +152,16 @@ if (res.dados && res.dados.length > 0) {
     return valor / 1000;
   };
 
-  if (!plant) return <div className="p-4 text-muted-foreground">Carregando dados...</div>;
+if (!plant) return (
+  <div className="p-4 flex flex-col items-center justify-center text-muted-foreground">
+    <svg className="animate-spin h-6 w-6 text-solar-orange mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
+    <p className="text-sm">Carregando dados da usina...</p>
+  </div>
+);
+
 
   const formatDate = () => {
     switch (periodType) {
@@ -290,7 +299,7 @@ if (res.dados && res.dados.length > 0) {
 {/* Eficiência */}
 <Card className="hover:shadow-lg transition-shadow duration-300">
   <CardHeader className="pb-2">
-    <CardTitle className="text-solar-blue">Performance do Sistema</CardTitle>
+    <CardTitle className="text-solar-blue">Performance Mensal do Sistema</CardTitle>
   </CardHeader>
   <CardContent>
     <div className="text-3xl font-bold">{plant.performance30d}%</div>
