@@ -181,11 +181,13 @@ useEffect(() => {
     try {
       const [usinas, diaria, semanal, mensal] = await Promise.all([
         getUsinas(),
-        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_diaria`),
-        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_7dias`),
-        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_30dias`)
+        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_diaria?forcar=true`),
+        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_7dias?forcar=true`),
+        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_30dias?forcar=true`)
       ]);
+
       console.log("🔍 Usinas carregadas:", usinas);
+
       const mapear = (lista: any[]) => {
         if (!Array.isArray(lista)) throw new Error("Resposta inválida");
         const mapa: { [key: number]: number } = {};
@@ -197,6 +199,22 @@ useEffect(() => {
       setPerformances(mapear(diaria));
       setPerformances7d(mapear(semanal));
       setPerformances30d(mapear(mensal));
+
+      console.log("📊 Performance diária por usina:");
+      Object.entries(mapear(diaria)).forEach(([plantId, perf]) => {
+        console.log(`  - Usina ${plantId}: ${perf}%`);
+      });
+
+      console.log("📊 Performance semanal por usina:");
+      Object.entries(mapear(semanal)).forEach(([plantId, perf]) => {
+        console.log(`  - Usina ${plantId}: ${perf}%`);
+      });
+
+      console.log("📊 Performance mensal por usina:");
+      Object.entries(mapear(mensal)).forEach(([plantId, perf]) => {
+        console.log(`  - Usina ${plantId}: ${perf}%`);
+      });
+
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard:", error);
       toast({ title: "Erro", description: "Falha ao carregar dados." });
@@ -207,6 +225,7 @@ useEffect(() => {
 
   carregarTodosOsDados();
 }, [toast]);
+
 
   // Atualiza usinas a cada 2 minutos
   useEffect(() => {

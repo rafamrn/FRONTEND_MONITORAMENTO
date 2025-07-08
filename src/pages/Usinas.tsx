@@ -32,55 +32,54 @@ const Usinas = () => {
   const [openDialogPlantId, setOpenDialogPlantId] = useState<number | null>(null);
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-  if (!token) {
-    window.location.href = "/login";
-    return;
-  }
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
 
-  fetch("https://backendmonitoramento-production.up.railway.app/usina", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-    .then((res) => {
-      if (!res.ok) throw new Error("Token inválido ou expirado");
-      return res.json();
+    fetch("https://backendmonitoramento-production.up.railway.app/usina", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     })
-    .then(setPowerPlants)
-    .catch((err) => {
-      console.error("Erro ao carregar usinas:", err);
-      if (err.message.includes("Token")) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      } else {
-        toast({
-          title: "Erro ao carregar usinas",
-          description: "Verifique sua conexão ou tente novamente mais tarde.",
-          variant: "destructive",
-        });
-      }
-    });
-}, []); // <-- FALTAVA ISSO!
-
+      .then((res) => {
+        if (!res.ok) throw new Error("Token inválido ou expirado");
+        return res.json();
+      })
+      .then(setPowerPlants)
+      .catch((err) => {
+        console.error("Erro ao carregar usinas:", err);
+        if (err.message.includes("Token")) {
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+        } else {
+          toast({
+            title: "Erro ao carregar usinas",
+            description: "Verifique sua conexão ou tente novamente mais tarde.",
+            variant: "destructive",
+          });
+        }
+      });
+  }, []);
 
   useEffect(() => {
     async function carregarProjecoesTodas() {
       for (const plant of powerPlants) {
         try {
           const token = localStorage.getItem("token");
-const res = await fetch(`https://backendmonitoramento-production.up.railway.app/projecoes/${plant.ps_id}?year=2025`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
-if (!res.ok) {
-  console.warn(`Sem projeções cadastradas para a usina ${plant.ps_name} (id: ${plant.ps_id})`);
-  continue; // <-- pular para a próxima usina
-}
-const data = await res.json();
-setDadosProjecao(prev => ({ ...prev, [plant.ps_id]: data }));
+          const res = await fetch(`https://backendmonitoramento-production.up.railway.app/projecoes/${plant.ps_id}?year=2025`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (!res.ok) {
+            console.warn(`Sem projeções cadastradas para a usina ${plant.ps_name} (id: ${plant.ps_id})`);
+            continue;
+          }
+          const data = await res.json();
+          setDadosProjecao(prev => ({ ...prev, [plant.ps_id]: data }));
 
         } catch (error) {
           console.error("Erro ao carregar projeções:", error);
@@ -101,104 +100,130 @@ setDadosProjecao(prev => ({ ...prev, [plant.ps_id]: data }));
   };
 
   const carregarProjecoesSalvas = async (plantId: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `https://backendmonitoramento-production.up.railway.app/projecoes/${plantId}?year=2025`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await res.json();
+
+      const numeroParaMes: { [key: number]: string } = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+      };
+
+      const dadosParaInputs: { [key: string]: number } = {};
+      data.forEach((item: { month: number; projection_kwh: number }) => {
+        const nomeMes = numeroParaMes[item.month];
+        if (nomeMes) {
+          dadosParaInputs[nomeMes] = item.projection_kwh;
+        }
+      });
+
+      setMonthlyGeneration(dadosParaInputs);
+      setDadosProjecao(prev => ({ ...prev, [plantId]: data }));
+    } catch (error) {
+      console.error("Erro ao carregar projeções salvas:", error);
+    }
+  };
+
+const handleSaveGeneration = async () => {
+  if (!selectedPlant) return;
+
+  const mesNumero: { [key: string]: number } = {
+    "Janeiro": 1, "Fevereiro": 2, "Março": 3, "Abril": 4,
+    "Maio": 5, "Junho": 6, "Julho": 7, "Agosto": 8,
+    "Setembro": 9, "Outubro": 10, "Novembro": 11, "Dezembro": 12
+  };
+
+  const projections = Object.entries(monthlyGeneration).map(([month, kwh]) => ({
+    month: mesNumero[month],
+    kwh
+  }));
+
+  const payload = {
+    plant_id: selectedPlant,
+    year: 2025,
+    projections
+  };
+
   try {
     const token = localStorage.getItem("token");
-    const res = await fetch(
-  `https://backendmonitoramento-production.up.railway.app/projecoes/${plantId}?year=2025`,
-  {
-    headers: {
-      Authorization: `Bearer ${token}`, // ADICIONAR
-    },
-  }
-);
-    const data = await res.json();
 
-    const numeroParaMes: { [key: number]: string } = {
+    // 1️⃣ Salva as projeções
+    const res = await fetch("https://backendmonitoramento-production.up.railway.app/projecoes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error("Erro ao salvar projeções.");
+
+    // 2️⃣ Atualiza dados locais
+    setDadosProjecao(prev => ({
+      ...prev,
+      [selectedPlant]: projections.map(p => ({
+        month: p.month,
+        projection_kwh: p.kwh
+      }))
+    }));
+
+    const nomeMes: { [key: number]: string } = {
       1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
       5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
       9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
     };
 
-    const dadosParaInputs: { [key: string]: number } = {};
-    data.forEach((item: { month: number; projection_kwh: number }) => {
-      const nomeMes = numeroParaMes[item.month];
-      if (nomeMes) {
-        dadosParaInputs[nomeMes] = item.projection_kwh;
-      }
+    const novosDados: { [key: string]: number } = {};
+    projections.forEach(({ month, kwh }) => {
+      const nome = nomeMes[month];
+      if (nome) novosDados[nome] = kwh;
     });
 
-    // Atualiza os estados
-    setMonthlyGeneration(dadosParaInputs);
-    setDadosProjecao(prev => ({ ...prev, [plantId]: data }));
-  } catch (error) {
-    console.error("Erro ao carregar projeções salvas:", error);
+    setMonthlyGeneration(novosDados);
+
+    // ✅ Mostra confirmação imediata
+    toast({
+      title: "Projeção salva com sucesso",
+      description: `A performance da usina será recalculada.`,
+    });
+
+    // 3️⃣ Recalcula performance de forma assíncrona (não trava a UI)
+    fetch("https://backendmonitoramento-production.up.railway.app/forcar_calculo_performance", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      }
+    }).then((resp) => {
+      if (!resp.ok) {
+        console.warn("Falha ao recalcular performance.");
+      }
+    }).catch((err) => {
+      console.error("Erro ao recalcular performance:", err);
+    });
+
+  } catch (error: any) {
+    console.error("Erro ao salvar projeções:", error);
+    toast({
+      title: "Erro",
+      description: error.message || "Erro desconhecido ao salvar ou recalcular performance.",
+      variant: "destructive",
+    });
   }
 };
 
-  const handleSaveGeneration = async () => {
-    if (!selectedPlant) return;
 
-    const mesNumero: { [key: string]: number } = {
-      "Janeiro": 1, "Fevereiro": 2, "Março": 3, "Abril": 4,
-      "Maio": 5, "Junho": 6, "Julho": 7, "Agosto": 8,
-      "Setembro": 9, "Outubro": 10, "Novembro": 11, "Dezembro": 12
-    };
 
-    const projections = Object.entries(monthlyGeneration).map(([month, kwh]) => ({
-      month: mesNumero[month],
-      kwh
-    }));
-
-    const payload = {
-      plant_id: selectedPlant,
-      year: 2025,
-      projections
-    };
-
-    try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch("https://backendmonitoramento-production.up.railway.app/projecoes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // ADICIONAR
-        },
-        body: JSON.stringify(payload),
-      });
-
-// Atualiza dadosProjecao com os novos valores
-setDadosProjecao(prev => ({
-  ...prev,
-  [selectedPlant]: projections.map(p => ({
-    month: p.month,
-    projection_kwh: p.kwh
-  }))
-}));
-
-// Atualiza os inputs com os valores recém salvos
-const nomeMes: { [key: number]: string } = {
-  1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
-  5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
-  9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
-};
-
-const novosDados: { [key: string]: number } = {};
-projections.forEach(({ month, kwh }) => {
-  const nome = nomeMes[month];
-  if (nome) novosDados[nome] = kwh;
-});
-
-setMonthlyGeneration(novosDados);
-toast({
-  title: "Projeção salva",
-  description: "A geração mensal foi atualizada com sucesso.",
-});
-    } catch (error) {
-      console.error("Erro ao salvar projeções:", error);
-      alert("Erro ao salvar projeções.");
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -309,8 +334,10 @@ toast({
 
       <Button
         onClick={async () => {
-          await handleSaveGeneration();
-          setOpenDialogPlantId(null); // FECHA o modal após salvar
+setOpenDialogPlantId(null); // fecha imediatamente
+
+// Executa salvar e performance em sequência
+handleSaveGeneration(); // NÃO usa await para não travar a UI
         }}
         className="bg-solar-orange hover:bg-solar-orange/90"
       >
