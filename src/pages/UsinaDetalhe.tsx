@@ -510,8 +510,13 @@ if (!plant) return (
       curr_power: Number(inversor.active_power) || 0,
       strings,
       mppts,
-      acOutput,
-      frequency: Number(inversor.frequencia_rede),
+      tensao_fase_a: Number(inversor.tensao_fase_a),
+corrente_fase_a: Number(inversor.corrente_fase_a),
+tensao_fase_b: Number(inversor.tensao_fase_b),
+corrente_fase_b: Number(inversor.corrente_fase_b),
+tensao_fase_c: Number(inversor.tensao_fase_c),
+corrente_fase_c: Number(inversor.corrente_fase_c),
+frequencia_rede: Number(inversor.frequencia_rede),
     };
   })}
 />

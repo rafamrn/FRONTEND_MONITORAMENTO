@@ -229,6 +229,7 @@ const EnergyFlowDiagram: React.FC<EnergyFlowDiagramProps> = ({ inverters }) => {
 
         {/* MPPTs */}
         <div className="flex flex-col items-center gap-2">
+          
             <h4 className="text-sm font-medium text-center mb-2">MPPTs</h4>
             <div className="grid grid-cols-2 gap-2">
             {inverter.mppts.map((mppt) => (

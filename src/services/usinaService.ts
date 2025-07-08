@@ -1,7 +1,7 @@
 export async function getUsinas() {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/solarcloud/usinas`, {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/usina`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -13,6 +13,7 @@ export async function getUsinas() {
 
   return await res.json();
 }
+
 
 // Exemplo de função auxiliar já mencionada no Dashboard:
 export async function fetchWithToken(url: string) {

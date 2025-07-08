@@ -185,7 +185,7 @@ useEffect(() => {
         fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_7dias`),
         fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_30dias`)
       ]);
-
+      console.log("🔍 Usinas carregadas:", usinas);
       const mapear = (lista: any[]) => {
         if (!Array.isArray(lista)) throw new Error("Resposta inválida");
         const mapa: { [key: number]: number } = {};

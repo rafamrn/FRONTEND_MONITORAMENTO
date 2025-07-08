@@ -489,9 +489,7 @@ const payload = {
       <TableCell>{integration.id}</TableCell>
       <TableCell>
         <div className="font-medium">
-          {integration.nome ||
-            clients.find((c) => c.id === integration.cliente_id)?.name ||
-            "—"}
+          {clients.find((c) => c.id === integration.cliente_id)?.name || "—"}
         </div>
       </TableCell>
       <TableCell>
@@ -508,65 +506,134 @@ const payload = {
             size="sm"
             onClick={() => togglePasswordVisibility(String(integration.id))}
           >
-            {showPasswords[integration.id] ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
+            {showPasswords[integration.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </Button>
         </div>
       </TableCell>
-      <TableCell>
-        <Input
-          value={integration.x_access_key || ""}
-          onChange={(e) => {
-            const newValue = e.target.value;
-            setIntegrations((prev) =>
-              prev.map((i) =>
-                i.id === integration.id
-                  ? { ...i, x_access_key: newValue }
-                  : i
-              )
-            );
-          }}
-          placeholder="x-access-key"
-          className="w-40"
-        />
-      </TableCell>
-      <TableCell>
-        <Input
-          value={integration.appkey || ""}
-          onChange={(e) => {
-            const newValue = e.target.value;
-            setIntegrations((prev) =>
-              prev.map((i) =>
-                i.id === integration.id ? { ...i, appkey: newValue } : i
-              )
-            );
-          }}
-          placeholder="appkey"
-          className="w-40"
-        />
-      </TableCell>
+
+      {/* Campos específicos por plataforma */}
+      {integration.plataforma === "Sungrow" && (
+        <>
+          <TableCell>
+            <Input
+              value={integration.x_access_key || ""}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setIntegrations((prev) =>
+                  prev.map((i) =>
+                    i.id === integration.id ? { ...i, x_access_key: newValue } : i
+                  )
+                );
+              }}
+              placeholder="x-access-key"
+              className="w-40"
+            />
+          </TableCell>
+          <TableCell>
+            <Input
+              value={integration.appkey || ""}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setIntegrations((prev) =>
+                  prev.map((i) =>
+                    i.id === integration.id ? { ...i, appkey: newValue } : i
+                  )
+                );
+              }}
+              placeholder="appkey"
+              className="w-40"
+            />
+          </TableCell>
+        </>
+      )}
+
+      {integration.plataforma === "Deye" && (
+  <>
+    <TableCell>
+      <Input
+        value={integration.appid || ""}
+        onChange={(e) => {
+          const newValue = e.target.value;
+          setIntegrations((prev) =>
+            prev.map((i) =>
+              i.id === integration.id ? { ...i, appid: newValue } : i
+            )
+          );
+        }}
+        placeholder="appId"
+        className="w-40"
+      />
+    </TableCell>
+    <TableCell>
+      <Input
+        value={integration.appsecret || ""}
+        onChange={(e) => {
+          const newValue = e.target.value;
+          setIntegrations((prev) =>
+            prev.map((i) =>
+              i.id === integration.id ? { ...i, appsecret: newValue } : i
+            )
+          );
+        }}
+        placeholder="appSecret"
+        className="w-40"
+      />
+    </TableCell>
+  </>
+)}
+
+
       <TableCell>
         <Button
           variant="outline"
           size="sm"
-          onClick={() =>
-            handleUpdateKeys(
-              integration.id.toString(),
-              integration.appkey || "",
-              integration.x_access_key || ""
-            )
-          }
+          onClick={() => {
+          const body =
+            integration.plataforma === "Sungrow"
+              ? { appkey: integration.appkey, x_access_key: integration.x_access_key }
+              : { appid: integration.appid, appsecret: integration.appsecret };
+
+fetch(`${import.meta.env.VITE_API_URL}/admin/integracoes/${integration.id}`, {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+  body: JSON.stringify(body),
+})
+  .then(async (res) => {
+    if (!res.ok) throw new Error("Erro ao salvar integração");
+    const data = await res.json(); // <-- contém "status"
+    
+    setIntegrations((prev) =>
+      prev.map((i) =>
+        i.id === integration.id ? { ...i, status: data.status } : i
+      )
+    );
+
+    toast({
+      title: "Credenciais salvas!",
+      description: "Dados atualizados com sucesso.",
+    });
+  })
+  .catch((error: any) => {
+    toast({
+      title: "Erro ao salvar",
+      description: error.message || "Falha ao atualizar integração.",
+      variant: "destructive",
+    });
+  });
+
+          }}
         >
           Salvar
         </Button>
       </TableCell>
+
       <TableCell>
         <Badge className={getStatusBadge(integration.status)}>
-          {integration.status === "active" ? "Ativo" : "Inativo"}
-        </Badge>
+        {integration.status === "active" ? "Ativo" : "Inativo"}
+      </Badge>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {integration.ultima_sincronizacao
@@ -576,6 +643,7 @@ const payload = {
     </TableRow>
   ))}
 </TableBody>
+
 
               </Table>
             </CardContent>
