@@ -67,6 +67,8 @@ const salvarChaves = async (id: number, appkey: string, xAccessKey: string) => {
       title: "Erro ao salvar",
       description: error.message || "Falha ao atualizar as chaves.",
       variant: "destructive",
+
+      
     });
   }
 };
