@@ -227,7 +227,7 @@ useEffect(() => {
 }, [toast]);
 
 
-  // Atualiza usinas a cada 2 minutos
+  // Atualiza usinas a cada 2 minutos2
   useEffect(() => {
     const fetchUsinas = () => {
       getUsinas()
