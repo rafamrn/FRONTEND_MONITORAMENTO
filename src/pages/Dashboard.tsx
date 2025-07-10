@@ -175,59 +175,82 @@ const Dashboard = () => {
   const [performances7d, setPerformances7d] = useState<{ [plantId: number]: number }>({});
   const [performances30d, setPerformances30d] = useState<{ [plantId: number]: number }>({});
   const [loading, setLoading] = useState(true);
+  const [temProjecao, setTemProjecao] = useState<boolean | null>(null);
+  const [loadingPerformance, setLoadingPerformance] = useState(true);
 
 useEffect(() => {
-  const carregarTodosOsDados = async () => {
+  const carregarUsinas = async () => {
     try {
-      const [usinas, diaria, semanal, mensal] = await Promise.all([
-        getUsinas(),
-        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_diaria?forcar=true`),
-        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_7dias?forcar=true`),
-        fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_30dias?forcar=true`)
-      ]);
-
-      console.log("🔍 Usinas carregadas:", usinas);
-
-      const mapear = (lista: any[]) => {
-        if (!Array.isArray(lista)) throw new Error("Resposta inválida");
-        const mapa: { [key: number]: number } = {};
-        lista.forEach(item => mapa[item.plant_id] = item.performance_percentual);
-        return mapa;
-      };
-
+      const usinas = await getUsinas();
       setPlants(usinas);
-      setPerformances(mapear(diaria));
-      setPerformances7d(mapear(semanal));
-      setPerformances30d(mapear(mensal));
-
-      console.log("📊 Performance diária por usina:");
-      Object.entries(mapear(diaria)).forEach(([plantId, perf]) => {
-        console.log(`  - Usina ${plantId}: ${perf}%`);
-      });
-
-      console.log("📊 Performance semanal por usina:");
-      Object.entries(mapear(semanal)).forEach(([plantId, perf]) => {
-        console.log(`  - Usina ${plantId}: ${perf}%`);
-      });
-
-      console.log("📊 Performance mensal por usina:");
-      Object.entries(mapear(mensal)).forEach(([plantId, perf]) => {
-        console.log(`  - Usina ${plantId}: ${perf}%`);
-      });
-
+      console.log("🔍 Usinas carregadas:", usinas);
     } catch (error) {
-      console.error("Erro ao carregar dados do dashboard:", error);
-      toast({ title: "Erro", description: "Falha ao carregar dados." });
+      console.error("Erro ao carregar usinas:", error);
+      toast({ title: "Erro", description: "Falha ao carregar usinas." });
     } finally {
       setLoading(false);
     }
   };
 
-  carregarTodosOsDados();
+  carregarUsinas();
+}, [toast]);
+
+useEffect(() => {
+  const carregarPerformanceSeTiverProjecao = async () => {
+    setLoadingPerformance(true); // ⏳ inicia loading
+
+    try {
+      const res = await fetchWithToken(`${import.meta.env.VITE_API_URL}/existe`);
+      if (!res || !res.existe) {
+        console.warn("⚠️ Nenhuma projeção mensal cadastrada para este cliente.");
+        setTemProjecao(false);
+        setLoadingPerformance(false);
+        return;
+      }
+
+      setTemProjecao(true);
+
+const [diaria, semanal, mensal] = await Promise.all([
+  fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_diaria`),
+  fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_7dias`),
+  fetchWithToken(`${import.meta.env.VITE_API_URL}/performance_30dias`)
+]);
+
+console.log("🎯 Diária:", diaria);
+console.log("📆 7 dias:", semanal);
+console.log("📅 30 dias:", mensal);
+
+const mapear = (lista: any[]) => {
+  if (!Array.isArray(lista)) {
+    console.error("❌ Resposta inválida recebida:", lista);
+    throw new Error("Resposta inválida");
+  }
+  const mapa: { [key: number]: number } = {};
+  lista.forEach(item => {
+    if (typeof item.performance_percentual === "number") {
+      mapa[item.plant_id] = item.performance_percentual;
+    }
+  });
+  return mapa;
+};
+
+
+      setPerformances(mapear(diaria));
+      setPerformances7d(mapear(semanal));
+      setPerformances30d(mapear(mensal));
+    } catch (error) {
+      console.error("Erro ao carregar performance:", error);
+      toast({ title: "Erro", description: "Falha ao carregar performance." });
+    } finally {
+      setLoadingPerformance(false); // ✅ encerra loading
+    }
+  };
+
+  carregarPerformanceSeTiverProjecao();
 }, [toast]);
 
 
-  // Atualiza usinas a cada 2 minutos2
+// Atualiza usinas a cada 2 minutos2
   useEffect(() => {
     const fetchUsinas = () => {
       getUsinas()
@@ -323,42 +346,50 @@ useEffect(() => {
           </div>
   
           <div className="rounded-lg border bg-card overflow-x-auto">
-            <Table>
-              <TableCaption>Lista de todas as usinas solares.</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[250px]">Nome</TableHead>
-                  <TableHead>{!isMobile ? "Localização" : "Local"}</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Pot. Instalada (kW)</TableHead>
-                  <TableHead className="text-center">{!isMobile ? "Energia Hoje (kWh)" : "kWh"}</TableHead>
-                  <TableHead className="text-center">Performance</TableHead>
-                  <TableHead className="text-center">Capacidade Atual</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-              {plants
-              .filter((plant) => {
-                if (!selectedStatus) return true;
-                const status = mapFaultStatusToStatus(plant.ps_fault_status);
-                return status === selectedStatus;
-              })
-              .sort((a, b) => {
-                const perfA = performances30d[a.ps_id] ?? 0;
-                const perfB = performances30d[b.ps_id] ?? 0;
-                return perfA - perfB;
-              })
-              .map((plant) => (
-                <PlantDetailRow
-                  key={plant.ps_id}
-                  plant={plant}
-                  performance1d={performances[plant.ps_id] || 0}
-                  performance7d={performances7d[plant.ps_id] || 0}
-                  performance30d={performances30d[plant.ps_id] || 0}
-                />
-              ))}
-              </TableBody>
-            </Table>
+{loadingPerformance ? (
+  <div className="flex justify-center items-center py-12 animate-fade-in">
+    <Loader2 className="h-5 w-5 animate-spin text-solar-orange mr-2" />
+    <span className="text-solar-orange font-medium">Calculando performance...</span>
+  </div>
+) : (
+  <Table>
+    <TableCaption>Lista de todas as usinas solares.</TableCaption>
+    <TableHeader>
+      <TableRow>
+        <TableHead className="w-[250px]">Nome</TableHead>
+        <TableHead>{!isMobile ? "Localização" : "Local"}</TableHead>
+        <TableHead className="text-center">Status</TableHead>
+        <TableHead className="text-center">Pot. Instalada (kW)</TableHead>
+        <TableHead className="text-center">{!isMobile ? "Energia Hoje (kWh)" : "kWh"}</TableHead>
+        <TableHead className="text-center">Performance</TableHead>
+        <TableHead className="text-center">Capacidade Atual</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {plants
+        .filter((plant) => {
+          if (!selectedStatus) return true;
+          const status = mapFaultStatusToStatus(plant.ps_fault_status);
+          return status === selectedStatus;
+        })
+        .sort((a, b) => {
+          const perfA = performances30d[a.ps_id] ?? 0;
+          const perfB = performances30d[b.ps_id] ?? 0;
+          return perfA - perfB;
+        })
+        .map((plant) => (
+          <PlantDetailRow
+            key={plant.ps_id}
+            plant={plant}
+            performance1d={performances[plant.ps_id] || 0}
+            performance7d={performances7d[plant.ps_id] || 0}
+            performance30d={performances30d[plant.ps_id] || 0}
+          />
+        ))}
+    </TableBody>
+  </Table>
+)}
+
           </div>
           </div>
   )}

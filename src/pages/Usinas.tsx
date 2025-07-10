@@ -16,6 +16,7 @@ import {
 import { Factory, Plus } from "lucide-react";
 import { getUsinas } from "@/services/usinaService";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 const months = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -30,6 +31,7 @@ const Usinas = () => {
   const [dadosProjecao, setDadosProjecao] = useState<{ [plantId: number]: any[] }>({});
   const { toast } = useToast();
   const [openDialogPlantId, setOpenDialogPlantId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -136,6 +138,8 @@ const Usinas = () => {
 const handleSaveGeneration = async () => {
   if (!selectedPlant) return;
 
+  setLoading(true); // ⏳ Inicia carregamento
+
   const mesNumero: { [key: string]: number } = {
     "Janeiro": 1, "Fevereiro": 2, "Março": 3, "Abril": 4,
     "Maio": 5, "Junho": 6, "Julho": 7, "Agosto": 8,
@@ -156,19 +160,18 @@ const handleSaveGeneration = async () => {
   try {
     const token = localStorage.getItem("token");
 
-    // 1️⃣ Salva as projeções
-    const res = await fetch("https://backendmonitoramento-production.up.railway.app/projecoes", {
+    const res = await fetch("https://backendmonitoramento-production.up.railway.app/projecoes/salvar_e_recalcular", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
 
     if (!res.ok) throw new Error("Erro ao salvar projeções.");
 
-    // 2️⃣ Atualiza dados locais
+    // Atualiza os dados locais
     setDadosProjecao(prev => ({
       ...prev,
       [selectedPlant]: projections.map(p => ({
@@ -191,25 +194,9 @@ const handleSaveGeneration = async () => {
 
     setMonthlyGeneration(novosDados);
 
-    // ✅ Mostra confirmação imediata
     toast({
       title: "Projeção salva com sucesso",
-      description: `A performance da usina será recalculada.`,
-    });
-
-    // 3️⃣ Recalcula performance de forma assíncrona (não trava a UI)
-    fetch("https://backendmonitoramento-production.up.railway.app/forcar_calculo_performance", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      }
-    }).then((resp) => {
-      if (!resp.ok) {
-        console.warn("Falha ao recalcular performance.");
-      }
-    }).catch((err) => {
-      console.error("Erro ao recalcular performance:", err);
+      description: `A performance da usina foi recalculada.`,
     });
 
   } catch (error: any) {
@@ -219,13 +206,13 @@ const handleSaveGeneration = async () => {
       description: error.message || "Erro desconhecido ao salvar ou recalcular performance.",
       variant: "destructive",
     });
+  } finally {
+    setLoading(false); // ✅ Finaliza carregamento
   }
 };
 
 
-
-
-  return (
+return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-solar-blue dark:text-white">Usinas</h1>
@@ -332,17 +319,24 @@ const handleSaveGeneration = async () => {
         Cancelar
       </Button>
 
-      <Button
-        onClick={async () => {
-setOpenDialogPlantId(null); // fecha imediatamente
+<Button
+  onClick={async () => {
+    setOpenDialogPlantId(null);
+    handleSaveGeneration();
+  }}
+  className="bg-solar-orange hover:bg-solar-orange/90"
+  disabled={loading}
+>
+  {loading ? (
+    <span className="flex items-center gap-2">
+      <Loader2 className="animate-spin w-4 h-4" />
+      Salvando...
+    </span>
+  ) : (
+    "Salvar Projeção"
+  )}
+</Button>
 
-// Executa salvar e performance em sequência
-handleSaveGeneration(); // NÃO usa await para não travar a UI
-        }}
-        className="bg-solar-orange hover:bg-solar-orange/90"
-      >
-        Salvar Projeção
-      </Button>
     </DialogFooter>
   </DialogContent>
 </Dialog>

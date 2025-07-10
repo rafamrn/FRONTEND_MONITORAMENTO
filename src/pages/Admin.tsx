@@ -29,16 +29,33 @@ interface Client {
 interface Integration {
   id: number;
   cliente_id: number;
-  nome?: string;
+  nome?: string; // <- importante para aparecer na tabela
   plataforma: string;
   username: string;
   senha: string;
   appkey: string | null;
   x_access_key: string | null;
+  appid?: string | null;
+  appsecret?: string | null;
+  companyid?: string | null;
   status: string;
   ultima_sincronizacao?: string;
 }
 
+const Admin = () => {
+  const { toast } = useToast();
+  const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
+  const [convites, setConvites] = useState<{ email: string; token: string; utilizado: boolean }[]>([]);
+  const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
+  const [clients, setClients] = useState<Client[]>([]);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [newClient, setNewClient] = useState({
+    name: "",
+    email: "",
+    password: "",
+    company: "",
+    plan: "",
+  });
 
 
 
@@ -101,66 +118,6 @@ const handleUpdateKeys = async (id: string, appkey: string, x_access_key: string
   }
 };
 
-const handleCreateClient = async () => {
-  try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/clientes`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify(newClient),
-    });
-
-    if (!res.ok) throw new Error("Erro ao criar cliente");
-
-    const data = await res.json();
-    setClients([...clients, data]);
-    toast({ title: "Cliente criado", description: "Novo cliente adicionado com sucesso." });
-
-    // 🔁 Cria convite automaticamente após o cliente
-    const conviteRes = await fetch(`${import.meta.env.VITE_API_URL}/convites`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({
-        email: newClient.email,
-        cliente_id: data.id, // <-- ID retornado do novo cliente
-      }),
-    });
-
-    if (!conviteRes.ok) throw new Error("Cliente criado, mas erro ao gerar convite");
-
-    const conviteData = await conviteRes.json();
-    toast({
-      title: "Convite gerado",
-      description: `Token: ${conviteData.token}`,
-    });
-
-    setNewClient({ name: "", email: "", password: "", company: "", plan: "" });
-
-  } catch (err: any) {
-    toast({
-      title: "Erro",
-      description: err.message || "Erro ao criar cliente",
-      variant: "destructive",
-    });
-  }
-};
-
-
-
-
-const Admin = () => {
-  const { toast } = useToast();
-  const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
-  const [convites, setConvites] = useState<{ email: string; token: string; utilizado: boolean }[]>([]);
-  const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
-  const [clients, setClients] = useState<Client[]>([]);
-  const [integrations, setIntegrations] = useState<Integration[]>([]);
-
   useEffect(() => {
   const token = localStorage.getItem("token");
   if (!token) return;
@@ -222,6 +179,36 @@ useEffect(() => {
     };
     return variants[status as keyof typeof variants] || 'bg-gray-100 text-gray-800';
   };
+
+const handleDeleteIntegration = async (id: number) => {
+  const token = localStorage.getItem("token");
+
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/integracoes/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) throw new Error("Erro ao deletar integração.");
+
+    setIntegrations(prev => prev.filter(integration => integration.id !== id));
+
+    toast({
+      title: "Integração removida",
+      description: "A integração foi excluída com sucesso.",
+    });
+  } catch (error: any) {
+    toast({
+      title: "Erro ao excluir",
+      description: error.message || "Falha ao excluir integração.",
+      variant: "destructive",
+    });
+  }
+};
+
+
 
   const handleDeleteClient = async (clientId: string) => {
   try {
@@ -489,11 +476,11 @@ const payload = {
   {integrations.map((integration) => (
     <TableRow key={integration.id}>
       <TableCell>{integration.id}</TableCell>
-      <TableCell>
-        <div className="font-medium">
-          {clients.find((c) => c.id === integration.cliente_id)?.name || "—"}
-        </div>
-      </TableCell>
+<TableCell>
+  <div className="font-medium">
+    {integration.nome || "—"}
+  </div>
+</TableCell>
       <TableCell>
         <Badge variant="outline">{integration.plataforma}</Badge>
       </TableCell>
@@ -585,52 +572,73 @@ const payload = {
 )}
 
 
-      <TableCell>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-          const body =
-            integration.plataforma === "Sungrow"
-              ? { appkey: integration.appkey, x_access_key: integration.x_access_key }
-              : { appid: integration.appid, appsecret: integration.appsecret };
+<TableCell className="flex gap-2">
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => {
+      const body =
+        integration.plataforma === "Sungrow"
+          ? { appkey: integration.appkey, x_access_key: integration.x_access_key }
+          : { appid: integration.appid, appsecret: integration.appsecret };
 
-fetch(`${import.meta.env.VITE_API_URL}/admin/integracoes/${integration.id}`, {
-  method: "PUT",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  },
-  body: JSON.stringify(body),
-})
-  .then(async (res) => {
-    if (!res.ok) throw new Error("Erro ao salvar integração");
-    const data = await res.json(); // <-- contém "status"
-    
-    setIntegrations((prev) =>
-      prev.map((i) =>
-        i.id === integration.id ? { ...i, status: data.status } : i
-      )
-    );
+      fetch(`${import.meta.env.VITE_API_URL}/admin/integracoes/${integration.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(body),
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error("Erro ao salvar integração");
+          const data = await res.json();
+          setIntegrations((prev) =>
+            prev.map((i) =>
+              i.id === integration.id ? { ...i, status: data.status } : i
+            )
+          );
+          toast({
+            title: "Credenciais salvas!",
+            description: "Dados atualizados com sucesso.",
+          });
+        })
+        .catch((error: any) => {
+          toast({
+            title: "Erro ao salvar",
+            description: error.message || "Falha ao atualizar integração.",
+            variant: "destructive",
+          });
+        });
+    }}
+  >
+    Salvar
+  </Button>
 
-    toast({
-      title: "Credenciais salvas!",
-      description: "Dados atualizados com sucesso.",
-    });
-  })
-  .catch((error: any) => {
-    toast({
-      title: "Erro ao salvar",
-      description: error.message || "Falha ao atualizar integração.",
-      variant: "destructive",
-    });
-  });
+  <AlertDialog>
+    <AlertDialogTrigger asChild>
+      <Button variant="destructive" size="sm">
+        <Trash2 className="w-4 h-4" />
+      </Button>
+    </AlertDialogTrigger>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Remover Integração</AlertDialogTitle>
+        <AlertDialogDescription>
+          Tem certeza que deseja remover a integração com o usuário{" "}
+          <strong>{integration.username}</strong>? Essa ação não poderá ser desfeita.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+        <AlertDialogAction onClick={() => handleDeleteIntegration(integration.id)}>
+          Confirmar
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+</TableCell>
 
-          }}
-        >
-          Salvar
-        </Button>
-      </TableCell>
 
       <TableCell>
         <Badge className={getStatusBadge(integration.status)}>

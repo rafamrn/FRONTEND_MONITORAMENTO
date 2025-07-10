@@ -22,12 +22,21 @@ export async function fetchWithToken(url: string) {
   const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!res.ok) {
-    throw new Error(`Erro na requisição: ${url}`);
+    const textoErro = await res.text();
+    console.error(`Erro na requisição (${res.status}): ${textoErro}`);
+    throw new Error(`Erro na requisição: ${res.status}`);
   }
 
-  return await res.json();
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return await res.json();
+  } else {
+    console.warn("⚠️ Conteúdo inesperado na resposta:", await res.text());
+    return [];
+  }
 }
